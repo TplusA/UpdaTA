@@ -29,10 +29,12 @@ import strbo_repo
 import strbo_version
 
 
-def _handle_repo_changes(repo_url, current_flavor, target_flavor):
+def _handle_repo_changes(base_url, release_line,
+                         current_flavor, target_flavor):
     step = {
         'action': 'manage-repos',
-        'base_url': repo_url,
+        'base_url': base_url,
+        'release_line': release_line,
     }
 
     if target_flavor is None:
@@ -107,7 +109,7 @@ def _handle_version_change(current_version, target_version,
         .format('pinned' if target_version_pinned_on_server else 'requested',
                 target_version, target_flavor))
     return {
-        'action': 'dnf-upgrade',
+        'action': 'dnf-install',
         'requested_version': str(target_version),
         'version_file_url': '{}/{}/versions/V{}.version'
                             .format(repo_url, target_flavor, target_version),
@@ -116,19 +118,22 @@ def _handle_version_change(current_version, target_version,
 
 def _compute_package_manager_strategy(strategy, args, main_version,
                                       target_release_line):
-    repo_url = '{}/{}'.format(args.base_url, target_release_line)
-
     step, target_flavor, flavor_has_changed = \
-        _handle_repo_changes(repo_url, main_version.get_flavor(),
-                             args.target_flavor)
+        _handle_repo_changes(args.base_url, target_release_line,
+                             main_version.get_flavor(), args.target_flavor)
     if step:
         strategy.append(step)
 
-    step = _handle_version_change(main_version.get_version_number(),
-                                  args.target_version, flavor_has_changed,
-                                  repo_url, target_flavor)
+    step = _handle_version_change(
+                main_version.get_version_number(),
+                args.target_version, flavor_has_changed,
+                '{}/{}'.format(args.base_url, target_release_line),
+                target_flavor)
     if step:
         strategy.append(step)
+
+    if strategy:
+        strategy.append({'action': 'reboot-system'})
 
 
 def _determine_recovery_target_version(args, default_flavor,
