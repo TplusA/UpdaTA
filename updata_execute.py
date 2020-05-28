@@ -23,6 +23,7 @@
 import argparse
 import json
 import requests
+import subprocess
 from pathlib import Path
 
 from strbo_log import log, errormsg
@@ -56,6 +57,53 @@ def log_step(step, msg):
     log('{}: {}'.format(step['action'], msg))
 
 
+def do_manage_repos(step, d):
+    def write_var(var_name, value):
+        if value is None:
+            return False
+
+        log_step(step, 'Set dnf variable {} = {}'.format(var_name, value))
+        print(value, file=(d.args.dnf_vars_dir / var_name).open('w'))
+        return True
+
+    write_var('releasever', step.get('release_line'))
+    write_var('strbo_update_baseurl', step.get('base_url', None))
+
+    if write_var('strbo_flavor', step.get('enable_flavor', None)):
+        write_var('strbo_flavor_enabled', 'true')
+    else:
+        flavor = step.get('disable_flavor', None)
+        if flavor:
+            write_var('strbo_flavor_enabled', 'false')
+
+
+def do_dnf_install(step, d):
+    log_step(step, 'Downloading manifest for version {}'
+             .format(step['requested_version']))
+    r = requests.get(step['version_file_url'])
+    r.raise_for_status()
+
+    log_step(step, 'Installing packages')
+    cmd = ['dnf', 'install'] + \
+          [line.split(' ', 1)[0] for line in r.text.split('\n') if line]
+    subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+
+
+def do_dnf_distro_sync(step, d):
+    log_step(step, 'Synchronizing with latest distro version')
+    cmd = ['dnf', 'distro-sync']
+    subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+
+
+def do_reboot_system(step, d):
+    # it would be great if we could just use the REST API here, but it is
+    # entirely possible for the REST API to be non-funcional at this point;
+    # hence, we reboot by ourselves
+    log_step(step, 'Requesting system reboot')
+    cmd = ['systemctl', 'isolate', 'systemd-reboot.service']
+    subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+
+
 def do_run_installer(step, d):
     log_step(step, 'Replacing recovery system -> {}'
                    .format(step['requested_version']))
@@ -83,9 +131,10 @@ def do_run_installer(step, d):
     if v['number'] != step['requested_version'] or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
-        raise RuntimeError('Recovery system version is still wrong: '
-                           'line {} flavor {} version {}; giving up'
-                           .format(v['release_line'], v['flavor'], v['number']))
+        raise RuntimeError(
+                'Recovery system version is still wrong: '
+                'line {} flavor {} version {}; giving up'
+                .format(v['release_line'], v['flavor'], v['number']))
 
 
 def do_recover_system(step, d):
@@ -141,6 +190,9 @@ def main():
     parser.add_argument('--rest-api-url', '-u', metavar='URL', type=str,
                         default='http://localhost:8467/v1',
                         help='file containing an update plan')
+    parser.add_argument('--dnf_vars-dir', '-v', metavar='PATH', type=Path,
+                        default='/etc/dnf/vars',
+                        help='path to dnf variable definitions')
     args = parser.parse_args()
     data = Data(args)
     plan = json.load(args.plan.open('r'))
@@ -150,6 +202,10 @@ def main():
             raise RuntimeError('Invalid plan: {}'.format(args.plan.name))
 
     actions = {
+        'manage-repos': do_manage_repos,
+        'dnf-install': do_dnf_install,
+        'dnf-distro-sync': do_dnf_distro_sync,
+        'reboot-system': do_reboot_system,
         'run-installer': do_run_installer,
         'recover-system': do_recover_system,
     }
