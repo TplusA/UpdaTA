@@ -35,7 +35,7 @@ class Data:
 
     def get_rest_api_endpoint(self, category, id):
         if self._rest_entry_point is None:
-            r = requests.get(self.args.rest_api_url)
+            r = requests.get(self.args.rest_api_url + '/')
             r.raise_for_status()
             self._rest_entry_point = r.json()
 
@@ -83,7 +83,9 @@ def do_run_installer(step, d):
     if v['number'] != step['requested_version'] or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
-        raise RuntimeError('Recovery system version is still wrong, giving up')
+        raise RuntimeError('Recovery system version is still wrong: '
+                           'line {} flavor {} version {}; giving up'
+                           .format(v['release_line'], v['flavor'], v['number']))
 
 
 def do_recover_system(step, d):
@@ -117,7 +119,9 @@ def do_recover_system(step, d):
     if v['number'] != step['requested_version'] or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
-        raise RuntimeError('Recovery data version is still wrong, giving up')
+        raise RuntimeError('Recovery data version is still wrong: '
+                           'line {} flavor {} version {}; giving up'
+                           .format(v['release_line'], v['flavor'], v['number']))
 
     log_step(step, 'Request system reboot into recovery system')
     ep = d.get_rest_api_endpoint('recovery_data', 'reboot_system')

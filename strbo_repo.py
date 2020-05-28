@@ -98,7 +98,7 @@ class MainSystem:
 
 class RecoverySystem:
     def __init__(self, system_mountpoint='/bootpartr',
-                 data_mountpoint='/mnt', data_mountpoint_mounted=False):
+                 data_mountpoint='/src', data_mountpoint_mounted=False):
         self.system_mountpoint = Path(system_mountpoint)
         self.data_mountpoint = Path(data_mountpoint)
         self.data_mountpoint_mounted = data_mountpoint_mounted
@@ -115,7 +115,7 @@ class RecoverySystem:
             return None
 
     def get_data_version(self):
-        sr = self.data_mountpoint / 'strbo-release'
+        sr = self.data_mountpoint / 'images/strbo-release'
         unmount_needed = False
 
         try:

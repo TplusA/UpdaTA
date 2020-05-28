@@ -269,8 +269,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # main_sys = strbo_repo.MainSystem()
-    main_sys = strbo_repo.MainSystem('TEST_version_infos/test_etc')
+    main_sys = strbo_repo.MainSystem()
     main_version = main_sys.get_system_version()
 
     target_release_line = \
@@ -290,10 +289,7 @@ def main():
             _determine_recovery_target_version(args, main_version.get_flavor(),
                                                target_release_line)
 
-        # recovery_sys = strbo_repo.RecoverySystem()
-        recovery_sys = \
-            strbo_repo.RecoverySystem('TEST_version_infos/test_rsys',
-                                      'TEST_version_infos/test_rdat', True)
+        recovery_sys = strbo_repo.RecoverySystem()
 
         step = _ensure_recovery_system_compatibility(
                     args,
