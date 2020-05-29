@@ -133,6 +133,7 @@ def _compute_package_manager_strategy(strategy, args, main_version,
         strategy.append(step)
 
     if strategy:
+        log('Planning system reboot')
         strategy.append({'action': 'reboot-system'})
 
 
