@@ -1,0 +1,10 @@
+/GPATH
+/GRTAGS
+/GTAGS
+/tags
+/types_*.taghl
+
+__pycache__/
+
+/UpdaTA.egg-info/
+/dist/
