@@ -70,11 +70,11 @@ def do_manage_repos(step, d):
     write_var('strbo_update_baseurl', step.get('base_url', None))
 
     if write_var('strbo_flavor', step.get('enable_flavor', None)):
-        write_var('strbo_flavor_enabled', 'true')
+        write_var('strbo_flavor_enabled', '1')
     else:
         flavor = step.get('disable_flavor', None)
         if flavor:
-            write_var('strbo_flavor_enabled', 'false')
+            write_var('strbo_flavor_enabled', '0')
 
 
 def do_dnf_install(step, d):
