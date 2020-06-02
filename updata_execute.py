@@ -26,7 +26,7 @@ import requests
 import subprocess
 from pathlib import Path
 
-from strbo_log import log, errormsg
+from updata.strbo_log import log, errormsg
 
 
 class Data:

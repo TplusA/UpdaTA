@@ -24,9 +24,9 @@ import argparse
 import json
 import requests
 
-from strbo_log import log, errormsg
-import strbo_repo
-import strbo_version
+from updata.strbo_log import log, errormsg
+from updata import strbo_repo
+from updata import strbo_version
 
 
 def _handle_repo_changes(base_url, release_line,

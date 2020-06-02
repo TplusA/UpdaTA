@@ -24,8 +24,8 @@ from pathlib import Path
 import shlex
 import subprocess
 
-from strbo_log import errormsg
-from strbo_version import VersionNumber
+from .strbo_log import errormsg
+from .strbo_version import VersionNumber
 
 
 def _parse_shell_style_file(path):
