@@ -66,7 +66,7 @@ def do_manage_repos(step, d):
         print(value, file=(d.args.dnf_vars_dir / var_name).open('w'))
         return True
 
-    write_var('releasever', step.get('release_line'))
+    write_var('strbo_release_line', step.get('release_line'))
     write_var('strbo_update_baseurl', step.get('base_url', None))
 
     if write_var('strbo_flavor', step.get('enable_flavor', None)):
