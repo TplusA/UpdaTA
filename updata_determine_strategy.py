@@ -206,12 +206,16 @@ def _ensure_recovery_system_compatibility(args, rsys_version,
     installed_revision = _determine_compatible_rsys(compat, rsys_version)
 
     if required_revisions.intersection(installed_revision):
-        log('Installed recovery system {} is compatible with {}: not replacing'
-            .format(rsys_version, target_version))
-        return None
+        log('Installed recovery system {} is compatible with {}: {}'
+            .format(rsys_version, target_version,
+                    'update enforced' if args.force_rsys_update
+                    else 'not replacing'))
+        if not args.force_rsys_update:
+            return None
 
-    log('Installed recovery system {} is incompatible with {}'
-        .format(rsys_version, target_version))
+    if not args.force_rsys_update:
+        log('Installed recovery system {} is incompatible with {}'
+            .format(rsys_version, target_version))
 
     best = None
     for rev in reversed(compat_json['rank']):
@@ -265,6 +269,11 @@ def main():
         '--force-image-files', '-i', action='store_true',
         help='update the system from image files through the recovery system, '
              'even if not strictly necessary'
+    )
+    parser.add_argument(
+        '--force-rsys-update', '-s', action='store_true',
+        help='if updating via image files, then update recovery system as '
+             'well, even if not strictly necessary'
     )
     parser.add_argument(
         '--keep-user-data', '-k', action='store_true',
