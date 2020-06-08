@@ -24,6 +24,8 @@ import argparse
 import json
 import requests
 import subprocess
+import os
+import pwd
 from pathlib import Path
 
 from updata.strbo_log import log, errormsg
@@ -182,7 +184,24 @@ def do_recover_system(step, d):
     r.raise_for_status()
 
 
+def run_as_user(name):
+    try:
+        pw = pwd.getpwnam(name)
+        if os.geteuid() != pw.pw_uid or os.getegid() != pw.pw_gid:
+            os.setgid(pw.pw_gid)
+            os.setuid(pw.pw_uid)
+            log('Running as user {}'.format(name))
+    except PermissionError as e:
+        errormsg('Failed to run as user "{}": {}'.format(name, e))
+        raise
+    except KeyError as e:
+        errormsg('User "{}" does not exist'.format(name))
+        raise
+
+
 def main():
+    run_as_user('updata')
+
     parser = argparse.ArgumentParser(
                 description='Execute previously computed update plan')
     parser.add_argument('--plan', '-p', metavar='FILE', type=Path,
