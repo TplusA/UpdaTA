@@ -111,7 +111,7 @@ def do_reboot_system(step, d):
 
 
 def do_run_installer(step, d):
-    log_step(step, 'Replacing recovery system -> {}'
+    log_step(step, 'Replacing recovery system for {}'
                    .format(step['requested_version']))
     ep = d.get_rest_api_endpoint('recovery_data', 'replace_system')
     r = requests.post(ep, data={'dataurl': step['installer_url']})
@@ -134,13 +134,8 @@ def do_run_installer(step, d):
                            .format(sysinfo['status']['state']))
 
     v = sysinfo['version_info']
-    if v['number'].lstrip('V') != step['requested_version'].lstrip('V') or \
-            v['release_line'] != step['requested_line'] or \
-            v['flavor'] != step['requested_flavor']:
-        raise RuntimeError(
-                'Recovery system version is still wrong: '
-                'line {} flavor {} version {}; giving up'
-                .format(v['release_line'], v['flavor'], v['number']))
+    log_step(step, 'Recovery system version line {} flavor {} version {}'
+                   .format(v['release_line'], v['flavor'], v['number']))
 
 
 def do_recover_system(step, d):
