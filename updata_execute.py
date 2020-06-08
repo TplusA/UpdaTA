@@ -35,6 +35,7 @@ class Data:
     def __init__(self, args):
         self.args = args
         self._rest_entry_point = None
+        self._is_sudo_required = True
 
     def get_rest_api_endpoint(self, category, id):
         if self._rest_entry_point is None:
@@ -86,14 +87,16 @@ def do_dnf_install(step, d):
     r.raise_for_status()
 
     log_step(step, 'Installing packages')
-    cmd = ['dnf', 'install'] + \
-          [line.split(' ', 1)[0] for line in r.text.split('\n') if line]
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['dnf', 'install', '--assumeyes'] + \
+           [line.split(' ', 1)[0] for line in r.text.split('\n') if line]
     subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 
 
 def do_dnf_distro_sync(step, d):
     log_step(step, 'Synchronizing with latest distro version')
-    cmd = ['dnf', 'distro-sync']
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['dnf', 'distro-sync', '--assumeyes']
     subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 
 
@@ -102,7 +105,8 @@ def do_reboot_system(step, d):
     # entirely possible for the REST API to be non-funcional at this point;
     # hence, we reboot by ourselves
     log_step(step, 'Requesting system reboot')
-    cmd = ['systemctl', 'isolate', 'systemd-reboot.service']
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['systemctl', 'isolate', 'reboot.target']
     subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 
 
