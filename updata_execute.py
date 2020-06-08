@@ -134,7 +134,7 @@ def do_run_installer(step, d):
                            .format(sysinfo['status']['state']))
 
     v = sysinfo['version_info']
-    if v['number'] != step['requested_version'] or \
+    if v['number'].lstrip('V') != step['requested_version'].lstrip('V') or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
         raise RuntimeError(
@@ -171,7 +171,7 @@ def do_recover_system(step, d):
                            .format(datainfo['status']['state']))
 
     v = datainfo['version_info']
-    if v['number'] != step['requested_version'] or \
+    if v['number'].lstrip('V') != step['requested_version'].lstrip('V') or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
         raise RuntimeError(
