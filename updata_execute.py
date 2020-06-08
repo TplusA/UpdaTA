@@ -174,14 +174,16 @@ def do_recover_system(step, d):
     if v['number'] != step['requested_version'] or \
             v['release_line'] != step['requested_line'] or \
             v['flavor'] != step['requested_flavor']:
-        raise RuntimeError('Recovery data version is still wrong: '
-                           'line {} flavor {} version {}; giving up'
-                           .format(v['release_line'], v['flavor'], v['number']))
+        raise RuntimeError(
+                'Recovery data version is still wrong: '
+                'line {} flavor {} version {}; giving up'
+                .format(v['release_line'], v['flavor'], v['number']))
 
     log_step(step, 'Request system reboot into recovery system')
     ep = d.get_rest_api_endpoint('recovery_data', 'reboot_system')
     params = {
-        'request': 'Please kindly recover the system: I really know what I am doing',
+        'request': 'Please kindly recover the system: '
+                   'I really know what I am doing',
         'keep_user_data': step['keep_user_data']
     }
     r = requests.post(ep, json=params)
