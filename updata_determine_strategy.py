@@ -194,6 +194,10 @@ def _ensure_recovery_system_compatibility(args, rsys_version,
         '{}/{}/recovery-system.{}/strbo-recovery-compatibility.json' \
         .format(args.base_url, target_release_line, args.machine_name)
     compat_json = _read_recovery_compatibility_file(compat_url)
+
+    if compat_json is None:
+        raise RuntimeError('File strbo-recovery-compatibility.json missing')
+
     compat = compat_json['compatibility']
 
     required_revisions = _determine_compatible_rsys(compat, target_version)
