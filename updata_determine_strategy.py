@@ -244,9 +244,14 @@ def main():
     parser = argparse.ArgumentParser(
                 description='Determine upgrade path from current state to '
                             'given version number')
-    parser.add_argument('--base-url', '-u', metavar='URL', type=str,
-                        required=True,
-                        help='base URL of StrBo package repository')
+    parser.add_argument(
+        '--output-file', '-o', metavar='FILE', type=argparse.FileType('w'),
+        help='where to write the upgrade plan to (default: stdout)'
+    )
+    parser.add_argument(
+        '--base-url', '-u', metavar='URL', type=str, required=True,
+        help='base URL of StrBo package repository'
+    )
     parser.add_argument(
         '--target-version', '-v', metavar='VERSION',
         type=strbo_version.VersionNumber.from_string,
@@ -342,7 +347,10 @@ def main():
                     'keeping' if step['keep_user_data'] else 'erasing'))
         strategy.append(step)
 
-    print(json.dumps(strategy))
+    if args.output_file:
+        args.output_file.write(json.dumps(strategy))
+    else:
+        print(json.dumps(strategy))
 
 
 if __name__ == '__main__':
