@@ -201,8 +201,6 @@ def run_as_user(name):
 
 
 def main():
-    run_as_user('updata')
-
     parser = argparse.ArgumentParser(
                 description='Execute previously computed update plan')
     parser.add_argument('--plan', '-p', metavar='FILE', type=Path,
@@ -214,6 +212,9 @@ def main():
                         default='/etc/dnf/vars',
                         help='path to dnf variable definitions')
     args = parser.parse_args()
+
+    run_as_user('updata')
+
     data = Data(args)
     plan = json.load(args.plan.open('r'))
 
