@@ -195,7 +195,7 @@ def run_as_user(name):
     except PermissionError as e:
         errormsg('Failed to run as user "{}": {}'.format(name, e))
         raise
-    except KeyError as e:
+    except KeyError:
         errormsg('User "{}" does not exist'.format(name))
         raise
 
