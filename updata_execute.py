@@ -61,6 +61,9 @@ def log_step(step, msg):
 
 
 def do_manage_repos(step, d):
+    if d.args.reboot_only:
+        return
+
     def write_var(var_name, value):
         if value is None:
             return False
@@ -81,6 +84,9 @@ def do_manage_repos(step, d):
 
 
 def do_dnf_install(step, d):
+    if d.args.reboot_only:
+        return
+
     log_step(step, 'Downloading manifest for version {}'
              .format(step['requested_version']))
     r = requests.get(step['version_file_url'])
@@ -94,6 +100,9 @@ def do_dnf_install(step, d):
 
 
 def do_dnf_distro_sync(step, d):
+    if d.args.reboot_only:
+        return
+
     log_step(step, 'Synchronizing with latest distro version')
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['dnf', 'distro-sync', '--assumeyes']
@@ -101,6 +110,9 @@ def do_dnf_distro_sync(step, d):
 
 
 def do_reboot_system(step, d):
+    if d.args.avoid_reboot:
+        return
+
     # it would be great if we could just use the REST API here, but it is
     # entirely possible for the REST API to be non-funcional at this point;
     # hence, we reboot by ourselves
@@ -111,6 +123,9 @@ def do_reboot_system(step, d):
 
 
 def do_run_installer(step, d):
+    if d.args.reboot_only:
+        return
+
     log_step(step, 'Replacing recovery system for {}'
                    .format(step['requested_version']))
     ep = d.get_rest_api_endpoint('recovery_data', 'replace_system')
@@ -138,7 +153,10 @@ def do_run_installer(step, d):
                    .format(v['release_line'], v['flavor'], v['number']))
 
 
-def do_recover_system(step, d):
+def ensure_recovery_data(step, d):
+    if d.args.reboot_only:
+        return
+
     if 'recovery_data_url' in step:
         log_step(step, 'Replacing recovery data -> {}'
                        .format(step['requested_version']))
@@ -174,6 +192,11 @@ def do_recover_system(step, d):
                 'line {} flavor {} version {}; giving up'
                 .format(v['release_line'], v['flavor'], v['number']))
 
+
+def reboot_into_recovery_system(step, d):
+    if d.args.avoid_reboot:
+        return
+
     log_step(step, 'Request system reboot into recovery system')
     ep = d.get_rest_api_endpoint('recovery_data', 'reboot_system')
     params = {
@@ -183,6 +206,11 @@ def do_recover_system(step, d):
     }
     r = requests.post(ep, json=params)
     r.raise_for_status()
+
+
+def do_recover_system(step, d):
+    ensure_recovery_data(step, d)
+    reboot_into_recovery_system(step, d)
 
 
 def run_as_user(name):
@@ -205,6 +233,10 @@ def main():
                 description='Execute previously computed update plan')
     parser.add_argument('--plan', '-p', metavar='FILE', type=Path,
                         required=True, help='file containing an update plan')
+    parser.add_argument('--avoid-reboot', action='store_true',
+                        help='do everything, but do not reboot the system')
+    parser.add_argument('--reboot-only', action='store_true',
+                        help='do nothing, but reboot the system if planned')
     parser.add_argument('--rest-api-url', '-u', metavar='URL', type=str,
                         default='http://localhost:8467/v1',
                         help='file containing an update plan')
