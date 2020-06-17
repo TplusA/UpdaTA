@@ -96,6 +96,21 @@ class MainSystem:
             return None
 
 
+def _run_command(cmd, what):
+    proc = subprocess.run(cmd, capture_output=True)
+    if proc.returncode == 0:
+        return
+
+    if what is None:
+        what = ' '.join(cmd)
+
+    errormsg('Command "{}" FAILED: {}'.format(what, proc.stderr))
+
+    raise RuntimeError(
+            'Command "{}" returned non-zero exit status {}'
+            .format(what, proc.returncode))
+
+
 class RecoverySystem:
     def __init__(self, system_mountpoint='/bootpartr',
                  data_mountpoint='/src', data_mountpoint_mounted=False):
@@ -120,8 +135,7 @@ class RecoverySystem:
 
         try:
             if not self.data_mountpoint_mounted:
-                subprocess.check_output(['mount', str(self.data_mountpoint)],
-                                        stderr=subprocess.STDOUT)
+                _run_command(['mount', str(self.data_mountpoint)])
                 unmount_needed = True
 
             values = _parse_shell_style_file(sr)
@@ -132,5 +146,4 @@ class RecoverySystem:
             return None
         finally:
             if unmount_needed:
-                subprocess.check_output(['umount', str(self.data_mountpoint)],
-                                        stderr=subprocess.STDOUT)
+                _run_command(['umount', str(self.data_mountpoint)])
