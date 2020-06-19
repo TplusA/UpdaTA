@@ -24,11 +24,16 @@ import argparse
 import json
 import requests
 import subprocess
+import sys
 import os
 import pwd
 from pathlib import Path
 
 from updata.strbo_log import log, errormsg
+
+
+class RebootFailedError(Exception):
+    pass
 
 
 class Data:
@@ -134,7 +139,11 @@ def do_reboot_system(step, d):
     log_step(step, 'Requesting system reboot')
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['systemctl', 'isolate', 'reboot.target']
-    _run_command(cmd)
+
+    try:
+        _run_command(cmd)
+    except RuntimeError as e:
+        raise RebootFailedError(str(e))
 
 
 def do_run_installer(step, d):
@@ -225,7 +234,11 @@ def reboot_into_recovery_system(step, d):
 
 def do_recover_system(step, d):
     ensure_recovery_data(step, d)
-    reboot_into_recovery_system(step, d)
+
+    try:
+        reboot_into_recovery_system(step, d)
+    except requests.exceptions.HTTPError as e:
+        raise RebootFailedError(str(e))
 
 
 def run_as_user(name):
@@ -283,7 +296,12 @@ def main():
         a = step['action']
 
         if a in actions:
-            actions[a](step, data)
+            try:
+                actions[a](step, data)
+            except RebootFailedError as e:
+                errormsg('Failed to reboot: {}'.format(e))
+                sys.exit(10)
+
             log_step(step, 'Done')
         else:
             errormsg('Action "{}" unknown, skipping step'.format(a))
