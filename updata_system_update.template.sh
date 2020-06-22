@@ -22,6 +22,7 @@
 #   update_reboot_started
 #   update_reboot_stderr
 #   update_reboot_failed
+#   update_try_restart
 #
 
 test "x@ALLOW_EXECUTION@" = "xyes" || exit 3
@@ -39,16 +40,20 @@ UPDATE_FAIL_AGAIN="${STAMP_DIR}/update_failure_again"
 REBOOT_BEGIN="${STAMP_DIR}/update_reboot_started"
 REBOOT_STATUS="${STAMP_DIR}/update_reboot_stderr"
 REBOOT_FAIL="${STAMP_DIR}/update_reboot_failed"
+UPDATE_TRY_RESTART="${STAMP_DIR}/update_try_restart"
 
 test -f "${UPDATE_DONE}" || rm -f "${UPDATE_BEGIN}"
 test -f "${REBOOT_FAIL}" || rm -f "${REBOOT_BEGIN}"
 
 test -f "${UPDATE_FAIL_AGAIN}" && exit 12
 
-if test -f "${UPDATE_BEGIN}" && test -f "${UPDATE_FAIL}"
+if test -f "${UPDATE_BEGIN}" || test -f "${UPDATE_TRY_RESTART}"
 then
-    touch "${UPDATE_FAIL_AGAIN}"
-    rm -f "${UPDATE_BEGIN}"
+    if test -f "${UPDATE_FAIL}"
+    then
+        touch "${UPDATE_FAIL_AGAIN}"
+        rm -f "${UPDATE_BEGIN}" "${UPDATE_TRY_RESTART}"
+    fi
 fi
 
 if test ! -f "${UPDATE_BEGIN}"
