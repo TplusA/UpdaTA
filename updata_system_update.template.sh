@@ -70,7 +70,12 @@ then
 
     if test ${RET} -ne 0
     then
-        logger <"${UPDATE_FAIL}"
+        if test -s "${UPDATE_FAIL}"
+        then
+            logger <"${UPDATE_FAIL}"
+        else
+            logger "Failed update plan execution: exit code ${RET}, but no error messages"
+        fi
 
         test -f "${UPDATE_FAIL_AGAIN}" && exit 11
         exit 10
