@@ -88,7 +88,7 @@ def do_manage_repos(step, d):
             write_var('strbo_flavor_enabled', '0')
 
 
-def _run_command(cmd, what):
+def _run_command(cmd, what=None):
     proc = subprocess.run(cmd, capture_output=True)
     if proc.returncode == 0:
         return
