@@ -301,6 +301,9 @@ def main():
             except RebootFailedError as e:
                 errormsg('Failed to reboot: {}'.format(e))
                 sys.exit(10)
+            except requests.exceptions.ConnectionError as e:
+                errormsg('Failed connecting to server: {}'.format(e))
+                sys.exit(20)
 
             log_step(step, 'Done')
         else:
