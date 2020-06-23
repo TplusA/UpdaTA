@@ -39,6 +39,7 @@ UPDATE_FAIL="${STAMP_DIR}/update_failure"
 UPDATE_FAIL_AGAIN="${STAMP_DIR}/update_failure_again"
 REBOOT_BEGIN="${STAMP_DIR}/update_reboot_started"
 REBOOT_STATUS="${STAMP_DIR}/update_reboot_stderr"
+REBOOT_DONE="${STAMP_DIR}/update_reboot_done"
 REBOOT_FAIL="${STAMP_DIR}/update_reboot_failed"
 UPDATE_TRY_RESTART="${STAMP_DIR}/update_try_restart"
 
@@ -59,6 +60,7 @@ fi
 if test ! -f "${UPDATE_BEGIN}"
 then
     rm -f "${UPDATE_DONE}" "${UPDATE_FAIL}" "${REBOOT_BEGIN}"
+    rm -f "${REBOOT_DONE}" "${REBOOT_STATUS}" "${REBOOT_FAIL}"
     touch "${UPDATE_BEGIN}"
     sync
 
@@ -87,7 +89,6 @@ fi
 
 if test ! -f "${REBOOT_BEGIN}"
 then
-    rm -f "${REBOOT_STATUS}" "${REBOOT_FAIL}"
     touch "${REBOOT_BEGIN}"
     sync
 
@@ -96,15 +97,27 @@ then
 
     # reboot was possibly triggered, therefore it is possible (though unlikely)
     # that we do not reach this point in case the script returned with no
-    # error; in case of no error, we simply do nothing
-    test ${RET} -eq 0 && exit 0
+    # error; in case of no error, we simply create a final file and terminate
+    if test ${RET} -eq 0
+    then
+        touch "${REBOOT_DONE}"
+        exit 0
+    fi
 
     # failed to reboot
+    if test -s "${REBOOT_STATUS}"
+    then
+        logger <"${REBOOT_STATUS}"
+    else
+        logger "Failed executing reboot step: exit code ${RET}, but no error messages"
+    fi
+
     touch "${REBOOT_FAIL}"
-    logger <"${REBOOT_STATUS}"
 
     test ${RET} -eq 10 || exit 20
     exit 21
+else
+    touch "${REBOOT_DONE}"
 fi
 
 exit 0
