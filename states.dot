@@ -1,0 +1,43 @@
+digraph States
+{
+init[label="*init*\nScript Start", fillcolor=green, style=filled];
+
+{
+rank=same;
+ud_begin[label="*U*\nBegin Update"];
+ud_resume[label="*R*\nResume Update"];
+ud_multifail[label="*X*\nInvalid State"];
+ud_done[label="*C*\nUpdate Complete"];
+}
+
+{
+rank=same;
+ud_success[label="*US*\nUpdate Success"];
+ud_failed[label="*UF*\nFailed"];
+ud_failed_again[label="*RF*\nFailed Again"];
+}
+
+rb_try[label="*UR*\nTry Reboot"];
+rb_try2[label="*FR*\nTry Reboot"];
+rb_success[label="*UR2*\nReboot Triggered\nfor Completion", fillcolor=grey, style=filled];
+rb_success2[label="*FR2*\nReboot Triggered\nto Resume", fillcolor=grey, style=filled];
+rb_doing[label="Rebooting", fillcolor=yellow, style=filled];
+rb_failed[label="*URF*\nReboot Failed"];
+rb_failed2[label="*FRF*\nReboot Failed"];
+
+{
+rank=same;
+give_up[label="Clean Up,\nGive Up", fillcolor=yellow, style=filled, shape=box];
+done[label="*done*\nComplete", fillcolor=green, style=filled, shape=box];
+}
+
+init -> ud_begin -> ud_success -> rb_try -> rb_success -> rb_doing -> init -> ud_done -> done;
+ud_begin -> ud_failed -> rb_try2 -> rb_success2 -> rb_doing;
+rb_try -> rb_failed -> give_up;
+rb_try2 -> rb_failed2 -> give_up;
+
+init -> ud_resume -> ud_success;
+ud_resume -> ud_failed_again -> give_up;
+
+init -> ud_multifail -> give_up;
+}
