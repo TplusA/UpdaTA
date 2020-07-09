@@ -23,6 +23,8 @@
 import argparse
 import json
 import requests
+import os
+import pwd
 
 from updata.strbo_log import log, errormsg
 from updata import strbo_repo
@@ -240,6 +242,21 @@ def _ensure_recovery_system_compatibility(args, rsys_version,
     }
 
 
+def run_as_user(name):
+    try:
+        pw = pwd.getpwnam(name)
+        if os.geteuid() != pw.pw_uid or os.getegid() != pw.pw_gid:
+            os.setgid(pw.pw_gid)
+            os.setuid(pw.pw_uid)
+            log('Running as user {}'.format(name))
+    except PermissionError as e:
+        errormsg('Failed to run as user "{}": {}'.format(name, e))
+        raise
+    except KeyError:
+        errormsg('User "{}" does not exist'.format(name))
+        raise
+
+
 def main():
     parser = argparse.ArgumentParser(
                 description='Determine upgrade path from current state to '
@@ -292,6 +309,8 @@ def main():
              'required for updating via image files'
     )
     args = parser.parse_args()
+
+    run_as_user('updata')
 
     main_sys = strbo_repo.MainSystem()
     main_version = main_sys.get_system_version()
