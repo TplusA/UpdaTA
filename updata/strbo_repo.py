@@ -96,7 +96,7 @@ class MainSystem:
             return None
 
 
-def _run_command(cmd, what):
+def run_command(cmd, what=None):
     proc = subprocess.run(cmd, capture_output=True)
     if proc.returncode == 0:
         return
@@ -135,7 +135,7 @@ class RecoverySystem:
 
         try:
             if not self.data_mountpoint_mounted:
-                _run_command(['mount', str(self.data_mountpoint)])
+                run_command(['mount', str(self.data_mountpoint)])
                 unmount_needed = True
 
             values = _parse_shell_style_file(sr)
@@ -146,4 +146,4 @@ class RecoverySystem:
             return None
         finally:
             if unmount_needed:
-                _run_command(['umount', str(self.data_mountpoint)])
+                run_command(['umount', str(self.data_mountpoint)])

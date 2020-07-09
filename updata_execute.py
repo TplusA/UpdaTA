@@ -29,6 +29,7 @@ import os
 import pwd
 from pathlib import Path
 
+from updata.strbo_repo import run_command
 from updata.strbo_log import log, errormsg
 
 
@@ -88,21 +89,6 @@ def do_manage_repos(step, d):
             write_var('strbo_flavor_enabled', '0')
 
 
-def _run_command(cmd, what=None):
-    proc = subprocess.run(cmd, capture_output=True)
-    if proc.returncode == 0:
-        return
-
-    if what is None:
-        what = ' '.join(cmd)
-
-    errormsg('Command "{}" FAILED: {}'.format(what, proc.stderr))
-
-    raise RuntimeError(
-            'Command "{}" returned non-zero exit status {}'
-            .format(what, proc.returncode))
-
-
 def do_dnf_install(step, d):
     if d.args.reboot_only:
         return
@@ -116,7 +102,7 @@ def do_dnf_install(step, d):
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['dnf', 'install', '--assumeyes'] + \
            [line.split(' ', 1)[0] for line in r.text.split('\n') if line]
-    _run_command(cmd, 'dnf install')
+    run_command(cmd, 'dnf install')
 
 
 def do_dnf_distro_sync(step, d):
@@ -126,7 +112,7 @@ def do_dnf_distro_sync(step, d):
     log_step(step, 'Synchronizing with latest distro version')
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['dnf', 'distro-sync', '--assumeyes']
-    _run_command(cmd)
+    run_command(cmd)
 
 
 def do_reboot_system(step, d):
@@ -141,7 +127,7 @@ def do_reboot_system(step, d):
     cmd += ['systemctl', 'isolate', 'reboot.target']
 
     try:
-        _run_command(cmd)
+        run_command(cmd)
     except RuntimeError as e:
         raise RebootFailedError(str(e))
 
