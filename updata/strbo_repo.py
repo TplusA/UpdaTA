@@ -117,6 +117,7 @@ class RecoverySystem:
         self.system_mountpoint = Path(system_mountpoint)
         self.data_mountpoint = Path(data_mountpoint)
         self.data_mountpoint_mounted = data_mountpoint_mounted
+        self._is_sudo_required = True
 
     def get_system_version(self):
         sr = self.system_mountpoint / 'strbo-release'
@@ -135,7 +136,9 @@ class RecoverySystem:
 
         try:
             if not self.data_mountpoint_mounted:
-                run_command(['mount', str(self.data_mountpoint)])
+                cmd = ['sudo'] if self._is_sudo_required else []
+                cmd += ['/bin/mount', str(self.data_mountpoint)]
+                run_command(cmd)
                 unmount_needed = True
 
             values = _parse_shell_style_file(sr)
@@ -146,4 +149,6 @@ class RecoverySystem:
             return None
         finally:
             if unmount_needed:
-                run_command(['umount', str(self.data_mountpoint)])
+                cmd = ['sudo'] if self._is_sudo_required else []
+                cmd += ['/bin/umount', str(self.data_mountpoint)]
+                run_command(cmd)
