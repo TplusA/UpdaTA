@@ -23,7 +23,6 @@
 import argparse
 import json
 import requests
-import subprocess
 import sys
 import os
 import pwd
