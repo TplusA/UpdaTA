@@ -208,7 +208,8 @@ class RecoverySystem:
                 unmount_needed = True
 
             values = _parse_shell_style_file(sr)
-            return VersionInfo.from_strbo_release(values)
+            return None if values is None \
+                   else VersionInfo.from_strbo_release(values)
         except Exception as e:
             errormsg('Failed obtaining recovery data version from {}: {}'
                      .format(sr, e))
