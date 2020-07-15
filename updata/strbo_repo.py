@@ -48,6 +48,22 @@ def _parse_shell_style_file(path):
     return values
 
 
+def _parse_simple_assignments_file(path):
+    values = {}
+
+    try:
+        with path.open('r') as f:
+            for line in f:
+                key, value = line.split('=', 1)
+                if key:
+                    values[key.strip()] = value.strip()
+    except Exception as e:
+        errormsg('Error reading file {}: {}'.format(path, e))
+        values = None
+
+    return values
+
+
 class VersionInfo:
     def __init__(self, version_number, release_line, flavor,
                  time_stamp, commit_id):
@@ -79,6 +95,12 @@ class VersionInfo:
                            values['STRBO_DATETIME'],
                            values['STRBO_GIT_COMMIT'])
 
+    @staticmethod
+    def from_os_release(values):
+        return VersionInfo(VersionNumber.from_string(values['VERSION_ID']),
+                           'V1', None,
+                           values['BUILD_ID'], values['BUILD_GIT_COMMIT'])
+
 
 class MainSystem:
     def __init__(self, etc_path='/etc'):
@@ -89,7 +111,19 @@ class MainSystem:
 
         try:
             values = _parse_shell_style_file(sr)
-            return VersionInfo.from_strbo_release(values)
+            if values is not None:
+                return VersionInfo.from_strbo_release(values)
+        except Exception as e:
+            errormsg('Failed obtaining main system version from {}: {}'
+                     .format(sr, e))
+            return None
+
+        sr = self._etc_path / 'os-release'
+
+        try:
+            values = _parse_simple_assignments_file(sr)
+            return None if values is None \
+                   else VersionInfo.from_os_release(values)
         except Exception as e:
             errormsg('Failed obtaining main system version from {}: {}'
                      .format(sr, e))
@@ -124,11 +158,25 @@ class RecoverySystem:
 
         try:
             values = _parse_shell_style_file(sr)
-            return VersionInfo.from_strbo_release(values)
+            if values is not None:
+                return VersionInfo.from_strbo_release(values)
         except Exception as e:
             errormsg('Failed obtaining recovery system version from {}: {}'
                      .format(sr, e))
             return None
+
+        sr = self.system_mountpoint / 'os-release'
+
+        try:
+            values = _parse_simple_assignments_file(sr)
+            if values is not None:
+                return VersionInfo.from_os_release(values)
+        except Exception as e:
+            errormsg('Failed obtaining recovery system version from {}: {}'
+                     .format(sr, e))
+            return None
+
+        return VersionInfo(None, 'V1', None, None, None)
 
     def get_data_version(self):
         sr = self.data_mountpoint / 'images/strbo-release'
