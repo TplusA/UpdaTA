@@ -349,8 +349,9 @@ def main():
             'keep_user_data': args.keep_user_data,
         }
 
-        if recovery_sys.get_data_version().get_version_number() != \
-                target_version:
+        dv = recovery_sys.get_data_version()
+
+        if dv is None or dv.get_version_number() != target_version:
             log('Planning download of recovery images for version {}, '
                 'flavor {}'.format(target_version, target_flavor))
             step['recovery_data_url'] = \
