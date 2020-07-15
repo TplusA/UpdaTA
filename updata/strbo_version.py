@@ -513,6 +513,8 @@ class VersionRange:
         >>> VersionRange.from_vrange(['1.0.0d', '1.2.0b']) \
                 .contains(VersionNumber.from_string('1.1.0a'))
         True
+        >>> VersionRange.from_vrange(['1.0.0', '1.2.3']).contains(None)
+        False
 
         Single version number
         >>> VersionRange.from_vrange('2.4.5') \
@@ -526,6 +528,8 @@ class VersionRange:
         False
         >>> VersionRange.from_vrange('2.4.5') \
                 .contains(VersionNumber.from_string('2.4.6'))
+        False
+        >>> VersionRange.from_vrange('2.4.5').contains(None)
         False
 
         Single version pattern
@@ -594,6 +598,10 @@ class VersionRange:
         True
         >>> VersionRange.from_vrange('*.*.*.*') \
                 .contains(VersionNumber.from_string('1.0.0'))
+        False
+        >>> VersionRange.from_vrange('1.*.*').contains(None)
+        False
+        >>> VersionRange.from_vrange('*.*.*').contains(None)
         False
 
         With pattern as upper boundary
@@ -674,6 +682,9 @@ class VersionRange:
                 .contains(VersionNumber.from_string('2.0.0.0'))
         False
         """
+        if version is None:
+            return False
+
         if version.is_pattern():
             raise RuntimeError('Cannot match pattern with range')
 
