@@ -130,19 +130,37 @@ class MainSystem:
             return None
 
 
-def run_command(cmd, what=None):
-    proc = subprocess.run(cmd, capture_output=True)
-    if proc.returncode == 0:
-        return
-
+def _run_command_failure(cmd, what, stderr, returncode):
     if what is None:
         what = ' '.join(cmd)
 
-    errormsg('Command "{}" FAILED: {}'.format(what, proc.stderr))
+    errormsg('Command "{}" FAILED: {}'.format(what, stderr))
 
     raise RuntimeError(
             'Command "{}" returned non-zero exit status {}'
-            .format(what, proc.returncode))
+            .format(what, returncode))
+
+
+def _run_command_3_5(cmd, what):
+    proc = subprocess.run(cmd, capture_output=True)
+    if proc.returncode != 0:
+        _run_command_failure(cmd, what, proc.stderr, proc.returncode)
+
+
+def _run_command_3_4(cmd, what):
+    try:
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        _run_command_failure(cmd, what, e.output, e.returncode)
+
+
+def run_command(cmd, what=None):
+    if 'run' in subprocess.__dict__:
+        # Python 3.5 or later
+        _run_command_3_5(cmd, what)
+    else:
+        # Python 3.4 or earlier
+        _run_command_3_4(cmd, what)
 
 
 class RecoverySystem:
