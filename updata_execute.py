@@ -252,7 +252,7 @@ def main():
                         help='do nothing, but reboot the system if planned')
     parser.add_argument('--rest-api-url', '-u', metavar='URL', type=str,
                         default='http://localhost:8467/v1',
-                        help='file containing an update plan')
+                        help='REST API base URL')
     parser.add_argument('--dnf_vars-dir', '-v', metavar='PATH', type=Path,
                         default='/etc/dnf/vars',
                         help='path to dnf variable definitions')
