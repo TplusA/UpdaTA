@@ -23,6 +23,7 @@ test "x@ALLOW_EXECUTION@" = "xyes" || exit 3
 
 THE_PLAN="@THE_PLAN@"
 STAMP_DIR="@STAMP_DIR@"
+EXEC_ARGS=
 
 test -f "${THE_PLAN}" || exit 5
 test -d "${STAMP_DIR}" || exit 6
@@ -107,7 +108,7 @@ do
             logger 'Starting update'
             rm -f "${UPDATE_EXIT_CODE}"
 
-            updata_execute.py --avoid-reboot -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
+            updata_execute.py ${EXEC_ARGS} --avoid-reboot -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
             RET=$?
 
             if test ${RET} -eq 0
@@ -125,7 +126,7 @@ do
             rm -f "${UPDATE_FAIL}" "${REBOOT_BEGIN}" "${REBOOT_STATUS}" \
                   "${UPDATE_EXIT_CODE}"
 
-            updata_execute.py --avoid-reboot -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
+            updata_execute.py ${EXEC_ARGS} --avoid-reboot -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
             RET=$?
 
             if test ${RET} -eq 0
@@ -146,7 +147,7 @@ do
         UR)
             rm -f "${REBOOT_EXIT_CODE}"
 
-            updata_execute.py --reboot-only -p "${THE_PLAN}" 2>"${REBOOT_STATUS}"
+            updata_execute.py ${EXEC_ARGS} --reboot-only -p "${THE_PLAN}" 2>"${REBOOT_STATUS}"
             RET=$?
 
             if test ${RET} -eq 0
@@ -229,7 +230,7 @@ do
         FR)
             rm -f "${REBOOT_EXIT_CODE}"
 
-            updata_execute.py --reboot-only -p "${THE_PLAN}" 2>"${REBOOT_STATUS}"
+            updata_execute.py ${EXEC_ARGS} --reboot-only -p "${THE_PLAN}" 2>"${REBOOT_STATUS}"
             RET=$?
 
             if test ${RET} -eq 0
