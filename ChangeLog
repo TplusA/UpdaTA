@@ -1,0 +1,18 @@
+2020-08-04  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.2 released.
+
+	* Functionality: This version should work on both, V1 and V2 systems,
+	  and is compatible with Python 3.4 as shipped with older V1 Streaming
+	  Boards. The tools should be functionally complete by now, modulo
+	  some bugs.
+
+2020-06-02  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.1 released.
+
+	* First release: First version with setuptools packaging. Packaging
+	  works, but the programs are buggy and incomplete.
+
+
+Copyright 2020 T+A elektroakustik GmbH & Co. KG

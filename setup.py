@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='UpdaTA',
-    version='0.1',
+    version='0.2',
     maintainer='Robert Tiemann',
     maintainer_email='R.Tiemann@ta-hifi.de',
     packages=find_packages(),
