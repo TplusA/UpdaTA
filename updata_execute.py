@@ -108,6 +108,32 @@ def do_dnf_install(step, d):
     else:
         r = set()
 
+    residual = []
+
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['dnf', 'list', '--installed']
+
+    for line in run_command(cmd, 'dnf list').decode().split('\n'):
+        try:
+            p, ver, rest = line.split(None, 2)
+        except ValueError:
+            continue
+
+        name, arch = p.rsplit('.', 1)
+        ver = ver.split(':', 1)
+        ver = ver[0] if len(ver) == 1 else ver[1]
+
+        package = '{}-{}.{}'.format(name, ver, arch)
+        if package not in r:
+            residual.append(package)
+
+    log_step(step, 'Removing {} residual packages'.format(len(residual)))
+
+    if residual:
+        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
+        run_command(cmd, 'dnf remove')
+
 
 def do_dnf_distro_sync(step, d):
     if d.args.reboot_only:
