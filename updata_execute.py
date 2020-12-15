@@ -99,9 +99,14 @@ def do_dnf_install(step, d):
     r = [line.split(None, 1)[0] for line in r.text.split('\n') if line]
 
     log_step(step, 'Installing {} packages'.format(len(r)))
-    cmd = ['sudo'] if d._is_sudo_required else []
-    cmd += ['dnf', 'install', '--assumeyes'] + r
-    run_command(cmd, 'dnf install')
+
+    if r:
+        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd += ['dnf', 'install', '--assumeyes', '--allowerasing'] + r
+        run_command(cmd, 'dnf install')
+        r = set(r)
+    else:
+        r = set()
 
 
 def do_dnf_distro_sync(step, d):
