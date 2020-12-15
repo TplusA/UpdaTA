@@ -96,11 +96,11 @@ def do_dnf_install(step, d):
              .format(step['requested_version']))
     r = requests.get(step['version_file_url'])
     r.raise_for_status()
+    r = [line.split(None, 1)[0] for line in r.text.split('\n') if line]
 
-    log_step(step, 'Installing packages')
+    log_step(step, 'Installing {} packages'.format(len(r)))
     cmd = ['sudo'] if d._is_sudo_required else []
-    cmd += ['dnf', 'install', '--assumeyes'] + \
-           [line.split(' ', 1)[0] for line in r.text.split('\n') if line]
+    cmd += ['dnf', 'install', '--assumeyes'] + r
     run_command(cmd, 'dnf install')
 
 
