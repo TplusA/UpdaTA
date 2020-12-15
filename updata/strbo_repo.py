@@ -143,13 +143,15 @@ def _run_command_failure(cmd, what, stderr, returncode):
 
 def _run_command_3_5(cmd, what):
     proc = subprocess.run(cmd, capture_output=True)
-    if proc.returncode != 0:
+    if proc.returncode == 0:
+        return proc.stdout
+    else:
         _run_command_failure(cmd, what, proc.stderr, proc.returncode)
 
 
 def _run_command_3_4(cmd, what):
     try:
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         _run_command_failure(cmd, what, e.output, e.returncode)
 
@@ -157,10 +159,10 @@ def _run_command_3_4(cmd, what):
 def run_command(cmd, what=None):
     if 'run' in subprocess.__dict__:
         # Python 3.5 or later
-        _run_command_3_5(cmd, what)
+        return _run_command_3_5(cmd, what)
     else:
         # Python 3.4 or earlier
-        _run_command_3_4(cmd, what)
+        return _run_command_3_4(cmd, what)
 
 
 class RecoverySystem:
