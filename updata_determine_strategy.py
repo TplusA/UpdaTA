@@ -57,7 +57,7 @@ def _handle_repo_changes(base_url, release_line,
     return step, target_flavor if target_flavor is not None else '', True
 
 
-def _read_latest_txt_file(url, is_required):
+def _read_latest_txt_file(url):
     r = requests.get(url)
 
     if r.status_code == 200:
@@ -69,8 +69,7 @@ def _read_latest_txt_file(url, is_required):
             return None
 
     if r.status_code == 404:
-        if is_required:
-            errormsg('File latest.txt not found on server')
+        errormsg('File latest.txt not found on server')
     else:
         errormsg('Failed downloading latest.txt: {}'.format(r.status_code))
 
@@ -85,13 +84,10 @@ def _handle_version_change(current_version, target_version,
     if target_version is None:
         latest_version = \
             _read_latest_txt_file('{}/{}/versions/latest.txt'
-                                  .format(repo_url, target_flavor), False)
+                                  .format(repo_url, target_flavor))
 
         if not latest_version:
-            # just want the latest version of target flavor: distro-sync
-            log('Planning update to latest version of flavor {}'
-                .format(target_flavor))
-            return {'action': 'dnf-distro-sync'}
+            return None
 
         # want preset latest version of chosen flavor
         target_version = latest_version
@@ -152,7 +148,7 @@ def _determine_recovery_target_version(args, default_flavor,
             _read_latest_txt_file(
                 '{}/{}/{}/recovery-data.{}/latest.txt'
                 .format(args.base_url, target_release_line, target_flavor,
-                        args.machine_name), True)
+                        args.machine_name))
     else:
         target_version = args.target_version
 
