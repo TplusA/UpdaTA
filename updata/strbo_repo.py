@@ -130,11 +130,12 @@ class MainSystem:
             return None
 
 
-def _run_command_failure(cmd, what, stderr, returncode):
+def _run_command_failure(cmd, what, stderr, stdout, returncode):
     if what is None:
         what = ' '.join(cmd)
 
     errormsg('Command "{}" FAILED: {}'.format(what, stderr))
+    errormsg('Failed command\'s stdout: {}'.format(stdout))
 
     raise RuntimeError(
             'Command "{}" returned non-zero exit status {}'
@@ -146,14 +147,14 @@ def _run_command_3_5(cmd, what):
     if proc.returncode == 0:
         return proc.stdout
     else:
-        _run_command_failure(cmd, what, proc.stderr, proc.returncode)
+        _run_command_failure(cmd, what, proc.stderr, proc.stdout, proc.returncode)
 
 
 def _run_command_3_4(cmd, what):
     try:
         return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        _run_command_failure(cmd, what, e.output, e.returncode)
+        _run_command_failure(cmd, what, e.output, None, e.returncode)
 
 
 def run_command(cmd, what=None):
