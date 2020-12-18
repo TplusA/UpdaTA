@@ -138,8 +138,10 @@ def _run_command_failure(cmd, what, stderr, stdout, returncode):
     errormsg('Failed command\'s stdout: {}'.format(stdout))
 
     raise RuntimeError(
-            'Command "{}" returned non-zero exit status {}'
-            .format(what, returncode))
+            'Command "{}" returned non-zero exit status {}\n'
+            'STDERR: {}\n'
+            'STDOUT: {}\n'
+            .format(what, returncode, stderr, stdout))
 
 
 def _run_command_3_5(cmd, what):
@@ -147,7 +149,8 @@ def _run_command_3_5(cmd, what):
     if proc.returncode == 0:
         return proc.stdout
     else:
-        _run_command_failure(cmd, what, proc.stderr, proc.stdout, proc.returncode)
+        _run_command_failure(cmd, what, proc.stderr, proc.stdout,
+                             proc.returncode)
 
 
 def _run_command_3_4(cmd, what):
