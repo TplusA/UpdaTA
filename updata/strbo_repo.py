@@ -23,6 +23,7 @@
 from pathlib import Path
 import shlex
 import subprocess
+import os
 
 from .strbo_log import errormsg
 from .strbo_version import VersionNumber
@@ -144,8 +145,19 @@ def _run_command_failure(cmd, what, stderr, stdout, returncode):
             .format(what, returncode, stderr, stdout))
 
 
-def _run_command_3_5(cmd, what):
-    proc = subprocess.run(cmd, capture_output=True)
+def _mk_env(need_sbin_in_path):
+    if not need_sbin_in_path:
+        return None
+
+    env = os.environ.copy()
+    env['PATH'] = os.pathsep.join([env.get('PATH', os.defpath),
+                                   '/usr/local/sbin', '/usr/sbin', '/sbin'])
+    return env
+
+
+def _run_command_3_5(cmd, what, need_sbin_in_path):
+    proc = subprocess.run(cmd, capture_output=True,
+                          env=_mk_env(need_sbin_in_path))
     if proc.returncode == 0:
         return proc.stdout
     else:
@@ -153,20 +165,21 @@ def _run_command_3_5(cmd, what):
                              proc.returncode)
 
 
-def _run_command_3_4(cmd, what):
+def _run_command_3_4(cmd, what, need_sbin_in_path):
     try:
-        return subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT,
+                                       env=_mk_env(need_sbin_in_path))
     except subprocess.CalledProcessError as e:
         _run_command_failure(cmd, what, e.output, None, e.returncode)
 
 
-def run_command(cmd, what=None):
+def run_command(cmd, what=None, need_sbin_in_path=False):
     if 'run' in subprocess.__dict__:
         # Python 3.5 or later
-        return _run_command_3_5(cmd, what)
+        return _run_command_3_5(cmd, what, need_sbin_in_path)
     else:
         # Python 3.4 or earlier
-        return _run_command_3_4(cmd, what)
+        return _run_command_3_4(cmd, what, need_sbin_in_path)
 
 
 class RecoverySystem:

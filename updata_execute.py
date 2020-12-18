@@ -103,7 +103,7 @@ def do_dnf_install(step, d):
     if r:
         cmd = ['sudo'] if d._is_sudo_required else []
         cmd += ['dnf', 'install', '--assumeyes', '--allowerasing'] + r
-        run_command(cmd, 'dnf install')
+        run_command(cmd, 'dnf install', True)
         r = set(r)
     else:
         r = set()
@@ -113,7 +113,7 @@ def do_dnf_install(step, d):
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['dnf', 'list', '--installed']
 
-    for line in run_command(cmd, 'dnf list').decode().split('\n'):
+    for line in run_command(cmd, 'dnf list', True).decode().split('\n'):
         try:
             p, ver, rest = line.split(None, 2)
         except ValueError:
@@ -132,7 +132,7 @@ def do_dnf_install(step, d):
     if residual:
         cmd = ['sudo'] if d._is_sudo_required else []
         cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
-        run_command(cmd, 'dnf remove')
+        run_command(cmd, 'dnf remove', True)
 
 
 def do_dnf_distro_sync(step, d):
@@ -142,7 +142,7 @@ def do_dnf_distro_sync(step, d):
     log_step(step, 'Synchronizing with latest distro version')
     cmd = ['sudo'] if d._is_sudo_required else []
     cmd += ['dnf', 'distro-sync', '--assumeyes']
-    run_command(cmd)
+    run_command(cmd, 'dnf distro-sync', True)
 
 
 def do_reboot_system(step, d):
