@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -284,7 +284,7 @@ def main():
     parser.add_argument('--rest-api-url', '-u', metavar='URL', type=str,
                         default='http://localhost:8467/v1',
                         help='REST API base URL')
-    parser.add_argument('--dnf_vars-dir', '-v', metavar='PATH', type=Path,
+    parser.add_argument('--dnf-vars-dir', '-v', metavar='PATH', type=Path,
                         default='/etc/dnf/vars',
                         help='path to dnf variable definitions')
     args = parser.parse_args()
