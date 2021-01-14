@@ -28,7 +28,7 @@ import os
 import pwd
 from pathlib import Path
 
-from updata.strbo_repo import run_command
+from updata.strbo_repo import run_command, DNFVariables
 from updata.strbo_log import log, errormsg
 
 
@@ -41,6 +41,7 @@ class Data:
         self.args = args
         self._rest_entry_point = None
         self._is_sudo_required = True
+        self.dnf_vars = DNFVariables(args.dnf_vars_dir)
 
     def get_rest_api_endpoint(self, category, id):
         if self._rest_entry_point is None:
@@ -69,23 +70,21 @@ def do_manage_repos(step, d):
     if d.args.reboot_only:
         return
 
-    def write_var(var_name, value):
-        if value is None:
-            return False
-
+    def log_write(var_name, value):
         log_step(step, 'Set dnf variable {} = {}'.format(var_name, value))
-        print(value, file=(d.args.dnf_vars_dir / var_name).open('w'))
-        return True
 
-    write_var('strbo_release_line', step.get('release_line'))
-    write_var('strbo_update_baseurl', step.get('base_url', None))
+    d.dnf_vars.write_var('strbo_release_line', step.get('release_line'),
+                         log_write)
+    d.dnf_vars.write_var('strbo_update_baseurl', step.get('base_url', None),
+                         log_write)
 
-    if write_var('strbo_flavor', step.get('enable_flavor', None)):
-        write_var('strbo_flavor_enabled', '1')
+    if d.dnf_vars.write_var('strbo_flavor', step.get('enable_flavor', None),
+                            log_write):
+        d.dnf_vars.write_var('strbo_flavor_enabled', '1', log_write)
     else:
         flavor = step.get('disable_flavor', None)
         if flavor:
-            write_var('strbo_flavor_enabled', '0')
+            d.dnf_vars.write_var('strbo_flavor_enabled', '0', log_write)
 
 
 def do_dnf_install(step, d):

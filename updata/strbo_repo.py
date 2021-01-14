@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -101,6 +101,24 @@ class VersionInfo:
         return VersionInfo(VersionNumber.from_string(values['VERSION_ID']),
                            'V1', None,
                            values['BUILD_ID'], values['BUILD_GIT_COMMIT'])
+
+
+class DNFVariables:
+    def __init__(self, path_to_vars):
+        self._path_to_vars = path_to_vars
+
+    def write_var(self, var_name, value, log_fn=None):
+        if not var_name:
+            return False
+
+        if value is None:
+            return False
+
+        if log_fn:
+            log_fn(var_name, value)
+
+        print(value, file=(self._path_to_vars / var_name).open('w'))
+        return True
 
 
 class MainSystem:
