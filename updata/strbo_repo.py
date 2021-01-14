@@ -120,6 +120,24 @@ class DNFVariables:
         print(value, file=(self._path_to_vars / var_name).open('w'))
         return True
 
+    def read_var(self, var_name):
+        if not var_name:
+            return None
+
+        try:
+            return (self._path_to_vars / var_name).open().read()
+        except FileNotFoundError:
+            errormsg('dnf variable {} not found'
+                     .format(self._path_to_vars / var_name))
+        except PermissionError:
+            errormsg('No permission to read dnf variable {}'
+                     .format(self._path_to_vars / var_name))
+        except Exception as e:
+            errormsg('Failed reading dnf variable {}: {}'
+                     .format(self._path_to_vars / var_name, e))
+
+        return None
+
 
 class MainSystem:
     def __init__(self, etc_path='/etc'):
