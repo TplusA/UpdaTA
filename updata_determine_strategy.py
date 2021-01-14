@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -25,6 +25,7 @@ import json
 import requests
 import os
 import pwd
+from pathlib import Path
 
 from updata.strbo_log import log, errormsg
 from updata import strbo_repo
@@ -32,7 +33,7 @@ from updata import strbo_version
 
 
 def _handle_repo_changes(base_url, release_line,
-                         current_flavor, target_flavor):
+                         current_flavor, target_flavor, dnf_vars):
     step = {
         'action': 'manage-repos',
         'base_url': base_url,
@@ -40,21 +41,22 @@ def _handle_repo_changes(base_url, release_line,
     }
 
     if target_flavor is None:
-        return step, current_flavor, False
+        target_flavor = current_flavor
 
     if target_flavor == 'stable':
         target_flavor = ''
 
-    if target_flavor == current_flavor:
-        return step, current_flavor, False
+    flavor_was_changed = target_flavor != current_flavor
 
-    if current_flavor:
-        step['disable_flavor'] = current_flavor
+    configured_flavor = dnf_vars.read_var('strbo_flavor')
 
-    if target_flavor:
+    if configured_flavor and configured_flavor != target_flavor:
+        step['disable_flavor'] = configured_flavor
+
+    if target_flavor and configured_flavor != target_flavor:
         step['enable_flavor'] = target_flavor
 
-    return step, target_flavor if target_flavor is not None else '', True
+    return step, target_flavor, flavor_was_changed
 
 
 def _read_latest_txt_file(url):
@@ -118,7 +120,8 @@ def _compute_package_manager_strategy(strategy, args, main_version,
                                       target_release_line):
     step, target_flavor, flavor_has_changed = \
         _handle_repo_changes(args.base_url, target_release_line,
-                             main_version.get_flavor(), args.target_flavor)
+                             main_version.get_flavor(), args.target_flavor,
+                             strbo_repo.DNFVariables(args.dnf_vars_dir))
     if step:
         strategy.append(step)
 
@@ -304,6 +307,9 @@ def main():
         help='machine name of the Streaming Board (default: "raspberrypi"), '
              'required for updating via image files'
     )
+    parser.add_argument('--dnf-vars-dir', metavar='PATH', type=Path,
+                        default='/etc/dnf/vars',
+                        help='path to dnf variable definitions')
     args = parser.parse_args()
 
     run_as_user('updata')
