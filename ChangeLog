@@ -1,3 +1,33 @@
+2021-01-18  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.3 released.
+
+	* Functionality: Remove unnecessary, residual packages during update.
+
+	* Functionality: Do not support dnf-distro-sync anymore for the time
+	  being. The server must provide a latest.txt file to make the update
+	  process more predictable.
+
+	* Functionality: Add sbin directories to PATH for dnf invocations to
+	  make scriptlets work (for depmod, useradd, and possibly more
+	  programs used by packages whose installation haven't failed yet).
+
+	* Functionality: Fix up dnf flavor variables in case the variables are
+	  detected to be incorrect. The flavor name variable is incorrect when
+	  a certain flavor is currently running, but the variable contains a
+	  different value. The flavor-enabled variable is incorrect if it
+	  indicates that some flavor should (e.g., beta)/should not (stable)
+	  be running, but the currently running system disagrees.
+
+	  Most frequently, this kind of mismatch will happen when running off
+	  a fresh image made for a certain flavor. This can be triggered by
+	  installing a beta image into the recovery area and performing a
+	  system recovery.
+
+	* Stability: Skip dnf invocations for empty package lists.
+
+	* Misc: Improved logging of failing external programs.
+
 2020-08-04  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.2 released.
@@ -15,4 +45,4 @@
 	  works, but the programs are buggy and incomplete.
 
 
-Copyright 2020 T+A elektroakustik GmbH & Co. KG
+Copyright 2020, 2021 T+A elektroakustik GmbH & Co. KG
