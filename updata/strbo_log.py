@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -20,15 +20,29 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA  02110-1301, USA.
 
-import sys
+import logging
+import logging.handlers
+
+
+def _create_syslog_handler():
+    h = logging.handlers.SysLogHandler(address='/dev/log')
+    f = logging.Formatter('%(name)s: %(message)s')
+    h.setFormatter(f)
+    return h
+
+
+_log = logging.getLogger('updaTA')
+_log.addHandler(_create_syslog_handler())
+_log.addHandler(logging.StreamHandler())
+_log.setLevel(logging.INFO)
 
 
 def errormsg(msg):
-    print('ERROR: ' + msg, file=sys.stderr)
+    _log.error('ERROR: ' + msg)
 
 
 def log(msg):
-    print(msg, file=sys.stderr)
+    _log.info(msg)
 
 
 if __name__ == '__main__':
