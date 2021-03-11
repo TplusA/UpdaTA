@@ -1,3 +1,11 @@
+2021-03-11  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.4 released.
+
+	* Logging: Planning and execution components write logs to syslog, not
+	  only to stderr. The latter is necessary for observation by the REST
+	  API, but syslog is indispensable for the developer.
+
 2021-01-18  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.3 released.
