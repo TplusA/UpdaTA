@@ -27,6 +27,7 @@ import sys
 import os
 import pwd
 from pathlib import Path
+from time import sleep
 
 from updata.strbo_repo import run_command, DNFVariables
 from updata.strbo_log import log, errormsg
@@ -91,17 +92,43 @@ def do_dnf_install(step, d):
     if d.args.reboot_only:
         return
 
+    log_step(step, 'Cleaning up dnf state')
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['dnf', 'clean', 'packages', '--assumeyes']
+    run_command(cmd, 'dnf prepare', True)
+
     log_step(step, 'Downloading manifest for version {}'
              .format(step['requested_version']))
     r = requests.get(step['version_file_url'])
     r.raise_for_status()
     r = [line.split(None, 1)[0] for line in r.text.split('\n') if line]
 
+    log_step(step, 'Downloading up to {} packages'.format(len(r)))
+
+    if r:
+        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd += ['dnf', 'install', '--assumeyes', '--downloadonly'] + r
+        run_command(cmd, 'dnf download', True)
+
+    log_step(step, 'Entering update mode')
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['systemctl', 'isolate', 'system-update.target']
+    run_command(cmd, 'enter update mode', True)
+    sleep(5)
+
+    try:
+        tempfiles = d.args.dnf_work_dir / 'tempfiles.json'
+        r = list(json.load(tempfiles.open()))
+    except Exception as e:
+        errormsg('Failed to dnf package list: {}'.format(e))
+        r = None
+
     log_step(step, 'Installing {} packages'.format(len(r)))
 
     if r:
         cmd = ['sudo'] if d._is_sudo_required else []
-        cmd += ['dnf', 'install', '--assumeyes', '--allowerasing'] + r
+        cmd += ['dnf', 'install', '--assumeyes', '--allowerasing',
+                '--setopt', 'keepcache=True'] + r
         run_command(cmd, 'dnf install', True)
         r = set(r)
     else:
@@ -132,6 +159,11 @@ def do_dnf_install(step, d):
         cmd = ['sudo'] if d._is_sudo_required else []
         cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
         run_command(cmd, 'dnf remove', True)
+
+    log_step(step, 'Cleaning up downloaded packages')
+    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd += ['dnf', 'clean', 'packages', '--assumeyes']
+    run_command(cmd, 'dnf cleanup', True)
 
 
 def do_dnf_distro_sync(step, d):
@@ -286,6 +318,9 @@ def main():
     parser.add_argument('--dnf-vars-dir', '-v', metavar='PATH', type=Path,
                         default='/etc/dnf/vars',
                         help='path to dnf variable definitions')
+    parser.add_argument('--dnf-work-dir', '-w', metavar='PATH', type=Path,
+                        default='/var/local/data/dnf',
+                        help='path to dnf working directory')
     args = parser.parse_args()
 
     run_as_user('updata')
