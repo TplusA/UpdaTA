@@ -38,6 +38,7 @@ REBOOT_BEGIN="${STAMP_DIR}/update_reboot_started"
 REBOOT_STATUS="${STAMP_DIR}/update_reboot_stderr"
 REBOOT_FAIL="${STAMP_DIR}/update_reboot_failed"
 REBOOT_EXIT_CODE="${STAMP_DIR}/update_reboot_exit_code"
+SYSUPDATE_SYMLINK='/system-update'
 
 test -f "${UPDATE_FINISHED}" && exit 0
 
@@ -84,9 +85,12 @@ then
     then
         STATE='FRF'
     else
-        # this is actually FR2, but at startup it is R
-        STATE='R'
+        # this is actually FR2, but at startup it is R2
+        STATE='R2'
     fi
+elif test -e "${SYSUPDATE_SYMLINK}"
+then
+    STATE='R1'
 else
     STATE='U'
     rm -f "${UPDATE_FAIL_AGAIN}" "${REBOOT_BEGIN}" "${REBOOT_STATUS}" \
@@ -113,6 +117,34 @@ do
 
             if test ${RET} -eq 0
             then
+                rm -f "${UPDATE_FAIL}"
+
+                if test -e "${SYSUPDATE_SYMLINK}"
+                then
+                    STATE='OR'
+                else
+                    STATE='US'
+                    touch "${UPDATE_DONE}"
+                fi
+            else
+                STATE='UF'
+                echo "${RET}" >"${UPDATE_EXIT_CODE}"
+            fi
+            ;;
+        OR)
+            logger 'Rebooting for offline update'
+            sudo /bin/systemctl isolate reboot.target
+            exit 0
+            ;;
+        R1)
+            logger 'Starting offline update'
+            rm -f "${UPDATE_EXIT_CODE}"
+
+            updata_execute.py ${EXEC_ARGS} -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
+            RET=$?
+
+            if test ${RET} -eq 0
+            then
                 STATE='US'
                 rm -f "${UPDATE_FAIL}"
                 touch "${UPDATE_DONE}"
@@ -121,7 +153,7 @@ do
                 echo "${RET}" >"${UPDATE_EXIT_CODE}"
             fi
             ;;
-        R)
+        R2)
             logger 'Resuming update'
             rm -f "${UPDATE_FAIL}" "${REBOOT_BEGIN}" "${REBOOT_STATUS}" \
                   "${UPDATE_EXIT_CODE}"

@@ -27,7 +27,6 @@ import sys
 import os
 import pwd
 from pathlib import Path
-from time import sleep
 
 from updata.strbo_repo import run_command, DNFVariables
 from updata.strbo_log import log, errormsg
@@ -37,11 +36,16 @@ class RebootFailedError(Exception):
     pass
 
 
+class ExitForOfflineUpdate(Exception):
+    pass
+
+
 class Data:
     def __init__(self, args):
         self.args = args
         self._rest_entry_point = None
         self._is_sudo_required = True
+        self._download_symlink = Path('/system-update')
         self.dnf_vars = DNFVariables(args.dnf_vars_dir)
 
     def get_rest_api_endpoint(self, category, id):
@@ -62,6 +66,12 @@ class Data:
         errormsg('API endpoint {} in {} not found'.format(id, category))
         return None
 
+    def in_offline_mode(self):
+        return self._download_symlink.exists()
+
+    def get_offline_mode_symlink(self):
+        return self._download_symlink
+
 
 def log_step(step, msg):
     log('{}: {}'.format(step['action'], msg))
@@ -69,6 +79,9 @@ def log_step(step, msg):
 
 def do_manage_repos(step, d):
     if d.args.reboot_only:
+        return
+
+    if d.in_offline_mode():
         return
 
     def log_write(var_name, value):
@@ -88,12 +101,9 @@ def do_manage_repos(step, d):
             d.dnf_vars.write_var('strbo_flavor_enabled', '0', log_write)
 
 
-def do_dnf_install(step, d):
-    if d.args.reboot_only:
-        return
-
+def download_all_packages(step, symlink, dnf_work_dir, is_sudo_required):
     log_step(step, 'Cleaning up dnf state')
-    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
     run_command(cmd, 'dnf prepare', True)
 
@@ -106,27 +116,37 @@ def do_dnf_install(step, d):
     log_step(step, 'Downloading up to {} packages'.format(len(r)))
 
     if r:
-        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd = ['sudo'] if is_sudo_required else []
         cmd += ['dnf', 'install', '--assumeyes', '--downloadonly'] + r
         run_command(cmd, 'dnf download', True)
 
     log_step(step, 'Entering update mode')
-    cmd = ['sudo'] if d._is_sudo_required else []
-    cmd += ['systemctl', 'isolate', 'system-update.target']
-    run_command(cmd, 'enter update mode', True)
-    sleep(5)
 
+    if is_sudo_required:
+        cmd = ['sudo', 'ln', '-s', str(dnf_work_dir.resolve()), str(symlink)]
+        run_command(cmd, 'dnf download done', True)
+    else:
+        symlink.symlink_to(dnf_work_dir, True)
+
+
+def offline_update(step, symlink, is_sudo_required):
     try:
-        tempfiles = d.args.dnf_work_dir / 'tempfiles.json'
+        tempfiles = symlink / 'tempfiles.json'
         r = list(json.load(tempfiles.open()))
     except Exception as e:
         errormsg('Failed to dnf package list: {}'.format(e))
         r = None
 
+    if is_sudo_required:
+        cmd = ['sudo', 'rm', str(symlink)]
+        run_command(cmd, 'dnf begin offline update', True)
+    else:
+        symlink.unlink()
+
     log_step(step, 'Installing {} packages'.format(len(r)))
 
     if r:
-        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd = ['sudo'] if is_sudo_required else []
         cmd += ['dnf', 'install', '--assumeyes', '--allowerasing',
                 '--setopt', 'keepcache=True'] + r
         run_command(cmd, 'dnf install', True)
@@ -136,7 +156,7 @@ def do_dnf_install(step, d):
 
     residual = []
 
-    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'list', '--installed']
 
     for line in run_command(cmd, 'dnf list', True).decode().split('\n'):
@@ -156,18 +176,33 @@ def do_dnf_install(step, d):
     log_step(step, 'Removing {} residual packages'.format(len(residual)))
 
     if residual:
-        cmd = ['sudo'] if d._is_sudo_required else []
+        cmd = ['sudo'] if is_sudo_required else []
         cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
         run_command(cmd, 'dnf remove', True)
 
     log_step(step, 'Cleaning up downloaded packages')
-    cmd = ['sudo'] if d._is_sudo_required else []
+    cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
     run_command(cmd, 'dnf cleanup', True)
 
 
+def do_dnf_install(step, d):
+    if d.args.reboot_only:
+        return
+
+    if not d.in_offline_mode():
+        download_all_packages(step, d.get_offline_mode_symlink(),
+                              d.args.dnf_work_dir, d._is_sudo_required)
+        raise ExitForOfflineUpdate()
+    else:
+        offline_update(step, d.get_offline_mode_symlink(), d._is_sudo_required)
+
+
 def do_dnf_distro_sync(step, d):
     if d.args.reboot_only:
+        return
+
+    if d.in_offline_mode():
         return
 
     log_step(step, 'Synchronizing with latest distro version')
@@ -195,6 +230,9 @@ def do_reboot_system(step, d):
 
 def do_run_installer(step, d):
     if d.args.reboot_only:
+        return
+
+    if d.in_offline_mode():
         return
 
     log_step(step, 'Replacing recovery system for {}'
@@ -354,6 +392,9 @@ def main():
             except requests.exceptions.ConnectionError as e:
                 errormsg('Failed connecting to server: {}'.format(e))
                 sys.exit(20)
+            except ExitForOfflineUpdate:
+                do_reboot_system(step, data)
+                sys.exit(0)
 
             log_step(step, 'Done')
         else:
