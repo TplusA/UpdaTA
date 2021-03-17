@@ -5,18 +5,21 @@ init[label="*init*\nScript Start", fillcolor=green, style=filled];
 {
 rank=same;
 ud_begin[label="*U*\nBegin Update"];
-ud_resume[label="*R*\nResume Update"];
+ud_resume1[label="*R1*\nResume Offline Update"];
+ud_resume2[label="*R2*\nResume Update"];
 ud_multifail[label="*X*\nInvalid State"];
 ud_done[label="*C*\nUpdate Complete"];
 }
 
 {
 rank=same;
+u_success[label="*OR*\nReboot Triggered\nfor Offline Update", fillcolor=grey, style=filled];
 ud_success[label="*US*\nUpdate Success"];
 ud_failed[label="*UF*\nFailed"];
 ud_failed_again[label="*RF*\nFailed Again"];
 }
 
+offline_mode[label="Update Mode\nafter download", fillcolor=yellow, style=filled];
 rb_try[label="*UR*\nTry Reboot"];
 rb_try2[label="*FR*\nTry Reboot"];
 rb_success[label="*UR2*\nReboot Triggered\nfor Completion", fillcolor=grey, style=filled];
@@ -33,11 +36,26 @@ done[label="*done*\nComplete", fillcolor=green, style=filled, shape=box];
 
 init -> ud_begin -> ud_success -> rb_try -> rb_success -> rb_doing -> init -> ud_done -> done;
 ud_begin -> ud_failed -> rb_try2 -> rb_success2 -> rb_doing;
+ud_begin -> u_success-> offline_mode -> init;
 rb_try -> rb_failed -> give_up;
 rb_try2 -> rb_failed2 -> give_up;
 
-init -> ud_resume -> ud_success;
-ud_resume -> ud_failed_again -> give_up;
+init -> ud_resume1 -> ud_success;
+ud_resume1 -> ud_failed;
+init -> ud_resume2 -> ud_success;
+ud_resume2 -> ud_failed_again -> give_up;
 
 init -> ud_multifail -> give_up;
+
+subgraph happy_path
+{
+edge[color=green, fontcolor=darkgreen, style=dashed];
+edge[label="1"];
+init -> ud_begin -> u_success -> offline_mode -> init;
+edge[label="2"];
+init -> ud_resume1 -> ud_success -> rb_try -> rb_success -> rb_doing -> init;
+edge[label="3"];
+init -> ud_done -> done;
+}
+
 }
