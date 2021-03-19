@@ -1,3 +1,14 @@
+2021-03-19  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.5 released.
+
+	* Stability: Use offline system update strategy offered by systemd. We
+	  split the update into download and installation phases as suggested
+	  by systemd. The download phase is triggered from and monitored by
+	  the REST API, after which the system is rebooted into update mode.
+	  In that mode, UpdaTA is started as a systemd service and executes
+	  the second phase, followed by a reboot into the updated system.
+
 2021-03-11  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.4 released.
