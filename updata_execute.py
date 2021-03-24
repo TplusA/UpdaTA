@@ -101,7 +101,8 @@ def do_manage_repos(step, d):
             d.dnf_vars.write_var('strbo_flavor_enabled', '0', log_write)
 
 
-def download_all_packages(step, symlink, dnf_work_dir, is_sudo_required):
+def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
+                          is_sudo_required):
     log_step(step, 'Cleaning up dnf state')
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
@@ -112,6 +113,10 @@ def download_all_packages(step, symlink, dnf_work_dir, is_sudo_required):
     r = requests.get(step['version_file_url'])
     r.raise_for_status()
     r = [line.split(None, 1)[0] for line in r.text.split('\n') if line]
+
+    with (updata_work_dir / 'manifest.txt').open('w') as mf:
+        for line in r:
+            print(line, file=mf)
 
     log_step(step, 'Downloading up to {} packages'.format(len(r)))
 
@@ -128,13 +133,20 @@ def download_all_packages(step, symlink, dnf_work_dir, is_sudo_required):
     else:
         symlink.symlink_to(dnf_work_dir, True)
 
+    try:
+        tempfiles = symlink / 'tempfiles.json'
+        count = len(json.load(tempfiles.open()))
+        log_step(step, 'Can install {} downloaded packages'.format(count))
+    except Exception as e:
+        log_step(step, 'NO packages downloaded')
 
-def offline_update(step, symlink, is_sudo_required):
+
+def offline_update(step, symlink, updata_work_dir, is_sudo_required):
     try:
         tempfiles = symlink / 'tempfiles.json'
         r = list(json.load(tempfiles.open()))
     except Exception as e:
-        errormsg('Failed to dnf package list: {}'.format(e))
+        errormsg('Failed to read dnf package list: {}'.format(e))
         r = None
 
     if is_sudo_required:
@@ -150,8 +162,12 @@ def offline_update(step, symlink, is_sudo_required):
         cmd += ['dnf', 'install', '--assumeyes', '--allowerasing',
                 '--setopt', 'keepcache=True'] + r
         run_command(cmd, 'dnf install', True)
-        r = set(r)
-    else:
+
+    try:
+        manifest = updata_work_dir / 'manifest.txt'
+        r = set([line.strip() for line in manifest.open().readlines()])
+    except Exception as e:
+        errormsg('Failed to read manifest: {}'.format(e))
         r = set()
 
     residual = []
@@ -170,7 +186,7 @@ def offline_update(step, symlink, is_sudo_required):
         ver = ver[0] if len(ver) == 1 else ver[1]
 
         package = '{}-{}.{}'.format(name, ver, arch)
-        if package not in r:
+        if r and package not in r:
             residual.append(package)
 
     log_step(step, 'Removing {} residual packages'.format(len(residual)))
@@ -185,6 +201,8 @@ def offline_update(step, symlink, is_sudo_required):
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
     run_command(cmd, 'dnf cleanup', True)
 
+    manifest.unlink(missing_ok=True)
+
 
 def do_dnf_install(step, d):
     if d.args.reboot_only:
@@ -192,10 +210,12 @@ def do_dnf_install(step, d):
 
     if not d.in_offline_mode():
         download_all_packages(step, d.get_offline_mode_symlink(),
-                              d.args.dnf_work_dir, d._is_sudo_required)
+                              d.args.updata_work_dir, d.args.dnf_work_dir,
+                              d._is_sudo_required)
         raise ExitForOfflineUpdate()
     else:
-        offline_update(step, d.get_offline_mode_symlink(), d._is_sudo_required)
+        offline_update(step, d.get_offline_mode_symlink(),
+                       d.args.updata_work_dir, d._is_sudo_required)
 
 
 def do_dnf_distro_sync(step, d):
@@ -356,7 +376,10 @@ def main():
     parser.add_argument('--dnf-vars-dir', '-v', metavar='PATH', type=Path,
                         default='/etc/dnf/vars',
                         help='path to dnf variable definitions')
-    parser.add_argument('--dnf-work-dir', '-w', metavar='PATH', type=Path,
+    parser.add_argument('--updata-work-dir', '-w', metavar='PATH', type=Path,
+                        default='/var/local/data/system_update_data',
+                        help='path to UpdaTA working directory')
+    parser.add_argument('--dnf-work-dir', '-d', metavar='PATH', type=Path,
                         default='/var/local/data/dnf',
                         help='path to dnf working directory')
     args = parser.parse_args()

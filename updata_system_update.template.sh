@@ -140,7 +140,7 @@ do
             logger 'Starting offline update'
             rm -f "${UPDATE_EXIT_CODE}"
 
-            updata_execute.py ${EXEC_ARGS} -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
+            updata_execute.py ${EXEC_ARGS} --avoid-reboot -p "${THE_PLAN}" 2>"${UPDATE_FAIL}"
             RET=$?
 
             if test ${RET} -eq 0
