@@ -102,6 +102,7 @@ IS_FIRST_STATE=1
 # process state machine
 while true
 do
+    logger "State is ${STATE}"
     case $STATE
     in
         init)
