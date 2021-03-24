@@ -16,6 +16,8 @@ Stamp file              | init | U | R1 | US | UR | UR2 | URF | UF | RF | FR | F
 `update_finished`       |  -   | - | -  | -  | -  |  -  |  -  | -  | -  | -  |  -  |  -  |  X
 `/system-update`        |  -   | - | X  |(X) |(X) | (X) | (X) |(X) | -  |(X) | (X) | (X) |  -
 
+Files `update_exit_code` and `update_reboot_exit_code` are also created and
+deleted by the script, but they do not affect the state.
 
 State **R2** shown in diagram `states.dot` is the same as **FR2**, and state
 **C** in the diagram is the same as **UR2**. Therefore, these are not listed in
