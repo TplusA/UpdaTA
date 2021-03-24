@@ -1,3 +1,10 @@
+2021-03-24  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.6 released.
+
+	* Functionality: Make offline system updates work. There were several
+	  bugs in v0.5 which basically made v0.5 unusable.
+
 2021-03-19  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.5 released.
