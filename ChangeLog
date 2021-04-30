@@ -1,3 +1,11 @@
+2021-04-30  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 0.7 released.
+
+	* Functionality: Cumulative offline system updates didn't quite work
+	  because dnf doesn't delete one of its temporary files, and keeps
+	  updating it. So we delete it by ourselves.
+
 2021-03-24  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.6 released.
