@@ -108,6 +108,13 @@ def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
     run_command(cmd, 'dnf prepare', True)
 
+    tempfiles = dnf_work_dir.resolve() / 'tempfiles.json'
+    if is_sudo_required:
+        cmd = ['sudo', '/bin/rm', '-f', str(tempfiles)]
+        run_command(cmd, 'dnf delete tempfiles.json', True)
+    else:
+        tempfiles.unlink(missing_ok=True)
+
     log_step(step, 'Downloading manifest for version {}'
              .format(step['requested_version']))
     r = requests.get(step['version_file_url'])
