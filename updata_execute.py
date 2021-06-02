@@ -145,7 +145,7 @@ def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
         count = len(json.load(tempfiles.open()))
         log_step(step, 'Can install {} downloaded packages'.format(count))
     except Exception as e:
-        log_step(step, 'NO packages downloaded')
+        log_step(step, 'NO packages downloaded: {}'.format(e))
 
 
 def offline_update(step, symlink, updata_work_dir, is_sudo_required):
