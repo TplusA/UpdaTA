@@ -162,7 +162,7 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
     else:
         symlink.unlink()
 
-    log_step(step, 'Installing {} packages'.format(len(r)))
+    log_step(step, 'Installing {} packages'.format(0 if r is None else len(r)))
 
     if r:
         cmd = ['sudo'] if is_sudo_required else []
