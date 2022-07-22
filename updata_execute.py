@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -22,11 +22,11 @@
 
 import argparse
 import json
-import requests
 import sys
 import os
 import pwd
 from pathlib import Path
+import requests
 
 from updata.strbo_repo import run_command, DNFVariables
 from updata.strbo_log import log, errormsg
