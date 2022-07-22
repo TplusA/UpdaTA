@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -30,6 +30,7 @@ from pathlib import Path
 from updata.strbo_log import log, errormsg
 from updata import strbo_repo
 from updata import strbo_version
+from updata import strbo_compatibility
 
 
 def _handle_repo_changes(base_url, release_line,
@@ -161,86 +162,6 @@ def _determine_recovery_target_version(args, default_flavor,
     return target_version, target_flavor
 
 
-def _read_recovery_compatibility_file(url):
-    r = requests.get(url)
-
-    if r.status_code == 200:
-        return r.json()
-
-    if r.status_code == 404:
-        errormsg('File strbo-recovery-compatibility.json not found on server')
-    else:
-        errormsg('Failed downloading strbo-recovery-compatibility.json: {}'
-                 .format(r.status_code))
-
-    return None
-
-
-def _determine_compatible_rsys(compat, version):
-    revs = set()
-
-    for rev in compat:
-        for r in compat[rev]:
-            vr = strbo_version.VersionRange.from_vrange(r)
-            if vr.contains(version):
-                revs.add(rev)
-
-    return revs
-
-
-def _ensure_recovery_system_compatibility(args, rsys_version,
-                                          target_release_line, target_version,
-                                          target_flavor):
-    compat_url = \
-        '{}/{}/recovery-system.{}/strbo-recovery-compatibility.json' \
-        .format(args.base_url, target_release_line, args.machine_name)
-    compat_json = _read_recovery_compatibility_file(compat_url)
-
-    if compat_json is None:
-        raise RuntimeError('File strbo-recovery-compatibility.json missing')
-
-    compat = compat_json['compatibility']
-
-    required_revisions = _determine_compatible_rsys(compat, target_version)
-    log('Requested upgrade to {}/{} requires one of rsys versions {}'
-        .format(target_release_line, target_version, required_revisions))
-    installed_revision = _determine_compatible_rsys(compat, rsys_version)
-
-    if required_revisions.intersection(installed_revision):
-        log('Installed recovery system {} is compatible with {}: {}'
-            .format(rsys_version, target_version,
-                    'update enforced' if args.force_rsys_update
-                    else 'not replacing'))
-        if not args.force_rsys_update:
-            return None
-
-    if not args.force_rsys_update:
-        log('Installed recovery system {} is incompatible with {}'
-            .format(rsys_version, target_version))
-
-    best = None
-    for rev in reversed(compat_json['rank']):
-        if rev in required_revisions:
-            best = rev
-            break
-
-    if best is None:
-        raise RuntimeError('No recovery system for {} found'
-                           .format(target_version))
-
-    log('Planning upgrade of recovery system to revision {}'.format(best))
-
-    return {
-        'action': 'run-installer',
-        'requested_line': str(target_release_line),
-        'requested_version': str(target_version),
-        'requested_flavor': str(target_flavor),
-        'installer_url': '{}/{}/recovery-system.{}/strbo-rsysimg-{}.bin'
-                         .format(args.base_url, target_release_line,
-                                 args.machine_name, best),
-    }
-
-
 def run_as_user(name):
     try:
         pw = pwd.getpwnam(name)
@@ -336,10 +257,12 @@ def main():
 
         recovery_sys = strbo_repo.RecoverySystem()
 
-        step = _ensure_recovery_system_compatibility(
-                    args,
-                    recovery_sys.get_system_version().get_version_number(),
-                    target_release_line, target_version, target_flavor)
+        compat_json = strbo_compatibility.read_recovery_compatibility_file(
+            args, target_release_line)
+        step = strbo_compatibility.ensure_recovery_system_compatibility(
+            compat_json, args,
+            recovery_sys.get_system_version().get_version_number(),
+            target_release_line, target_version, target_flavor)
         if step:
             strategy.append(step)
 

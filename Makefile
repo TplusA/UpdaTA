@@ -13,7 +13,7 @@ all:
 	@echo '  clean         - Remove all generated files'
 
 check:
-	@for f in $$(grep -lr --include='*.py' 'import doctest'); do python3 $$f; done
+	@for f in $$(grep -lr --include='*.py' 'import doctest'); do python3 -m $$(echo $$f | tr '/' '.' | sed 's/\.py$///'); done
 	python3 -m pyflakes $(PYTHONFILES)
 	python3 -m ${FLAKE8} ${FLAKE8_OPTIONS} $(PYTHONFILES)
 
