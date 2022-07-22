@@ -60,21 +60,21 @@ def _handle_repo_changes(base_url, release_line,
     return step, target_flavor, flavor_was_changed
 
 
-def _read_latest_txt_file(url):
+def _read_latest_txt_file(url, short_name):
     r = requests.get(url)
 
     if r.status_code == 200:
         try:
             return strbo_version.VersionNumber.from_string(r.text.strip())
         except Exception as e:
-            errormsg('Failed parsing version number from latest.txt: {}'
-                     .format(e))
+            errormsg('Failed parsing version number from {}: {}'
+                     .format(short_name, e))
             return None
 
     if r.status_code == 404:
-        errormsg('File latest.txt not found on server')
+        errormsg('File {} not found on server'.format(short_name))
     else:
-        errormsg('Failed downloading latest.txt: {}'.format(r.status_code))
+        errormsg('Failed downloading {}: {}'.format(short_name, r.status_code))
 
     return None
 
@@ -87,7 +87,8 @@ def _handle_version_change(current_version, target_version,
     if target_version is None:
         latest_version = \
             _read_latest_txt_file('{}/{}/versions/latest.txt'
-                                  .format(repo_url, target_flavor))
+                                  .format(repo_url, target_flavor),
+                                  'latest.txt (packages)')
 
         if not latest_version:
             return None
@@ -152,7 +153,8 @@ def _determine_recovery_target_version(args, default_flavor,
             _read_latest_txt_file(
                 '{}/{}/{}/recovery-data.{}/latest.txt'
                 .format(args.base_url, target_release_line, target_flavor,
-                        args.machine_name))
+                        args.machine_name),
+                'latest.txt (recovery data)')
     else:
         target_version = args.target_version
 
