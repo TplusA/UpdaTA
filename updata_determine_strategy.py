@@ -33,6 +33,12 @@ from updata import strbo_version
 from updata import strbo_compatibility
 
 
+def _ensure_url_exists(url):
+    r = requests.head(url, allow_redirects=True)
+    if r.status_code != requests.codes.ok:
+        raise RuntimeError('Cannot access {}: {}'.format(url, r.status_code))
+
+
 def _handle_repo_changes(base_url, release_line,
                          current_flavor, target_flavor, dnf_vars):
     step = {
@@ -110,12 +116,14 @@ def _handle_version_change(current_version, target_version,
     log('Planning update to {} version {}, flavor {}'
         .format('pinned' if target_version_pinned_on_server else 'requested',
                 target_version, target_flavor))
-    return {
+    result = {
         'action': 'dnf-install',
         'requested_version': str(target_version),
         'version_file_url': '{}/{}/versions/V{}.version'
                             .format(repo_url, target_flavor, target_version),
     }
+    _ensure_url_exists(result['version_file_url'])
+    return result
 
 
 def _compute_package_manager_strategy(strategy, args, main_version,
@@ -285,6 +293,7 @@ def main():
                 '{}/{}/{}/recovery-data.{}/strbo-update-V{}.bin' \
                 .format(args.base_url, target_release_line, target_flavor,
                         args.machine_name, target_version)
+            _ensure_url_exists(step['recovery_data_url'])
         else:
             log('Update of recovery images for version {} avoided, '
                 'images already installed'.format(target_version))
