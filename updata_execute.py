@@ -91,6 +91,7 @@ def do_manage_repos(step, d):
                          log_write)
     d.dnf_vars.write_var('strbo_update_baseurl', step.get('base_url', None),
                          log_write)
+    d.dnf_vars.write_var('strbo_base_enabled', '1', log_write)
 
     if d.dnf_vars.write_var('strbo_flavor', step.get('enable_flavor', None),
                             log_write):
