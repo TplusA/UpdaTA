@@ -1,3 +1,20 @@
+2022-12-16  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 1.1 released.
+
+	* Fix: Always enable base repository. The build system must disable
+	  the repo for building an image, so we need to enable it again.
+
+2022-07-22  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 1.0 released.
+
+	* Stability: Probe URLs which are put into a strategy.
+
+	* Logging: Improved an error message.
+
+	* Misc: Refactorings.
+
 2021-06-28  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 0.8 released.
