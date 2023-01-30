@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -171,6 +171,11 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
                 '--setopt', 'keepcache=True'] + r
         run_command(cmd, 'dnf install', True)
 
+    log_step(step, "Running ldconfig after installing packages")
+    cmd = ['sudo'] if is_sudo_required else []
+    cmd += ['ldconfig']
+    run_command(cmd, "ldconfig after install", True)
+
     try:
         manifest = updata_work_dir / 'manifest.txt'
         r = set([line.strip() for line in manifest.open().readlines()])
@@ -203,6 +208,11 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
         cmd = ['sudo'] if is_sudo_required else []
         cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
         run_command(cmd, 'dnf remove', True)
+
+    log_step(step, "Running ldconfig after removing packages")
+    cmd = ['sudo'] if is_sudo_required else []
+    cmd += ['ldconfig']
+    run_command(cmd, "ldconfig after removal", True)
 
     log_step(step, 'Cleaning up downloaded packages')
     cmd = ['sudo'] if is_sudo_required else []
