@@ -1,3 +1,13 @@
+2023-01-31  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 1.2 released.
+
+	* Fix: Support downgrades of library packages which require changing
+	  the soname symlink.
+
+	* Logging: Write rotating logs to /var/local/data/updata/, and add
+	  timestamps to log entries.
+
 2022-12-16  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 1.1 released.
@@ -105,4 +115,4 @@
 	  works, but the programs are buggy and incomplete.
 
 
-Copyright 2020, 2021 T+A elektroakustik GmbH & Co. KG
+Copyright 2020, 2021, 2022, 2023 T+A elektroakustik GmbH & Co. KG

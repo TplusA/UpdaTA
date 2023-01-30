@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='UpdaTA',
-    version='1.1',
+    version='1.2',
     maintainer='Robert Tiemann',
     maintainer_email='R.Tiemann@ta-hifi.de',
     packages=find_packages(),
