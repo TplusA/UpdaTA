@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -34,6 +34,8 @@ def _create_syslog_handler():
 _log = logging.getLogger('updaTA')
 _log.addHandler(_create_syslog_handler())
 _log.addHandler(logging.StreamHandler())
+_log.addHandler(logging.handlers.RotatingFileHandler(
+    "/var/local/data/updata/logs", maxBytes=5 * 1024 * 1024, backupCount=2))
 _log.setLevel(logging.INFO)
 
 

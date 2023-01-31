@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -188,6 +188,8 @@ def run_as_user(name):
 
 
 def main():
+    log("updata_determine_strategy")
+
     parser = argparse.ArgumentParser(
                 description='Determine upgrade path from current state to '
                             'given version number')
@@ -310,4 +312,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        log("Unhandled exception: {}".format(e))
+        raise

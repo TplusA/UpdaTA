@@ -380,6 +380,8 @@ def run_as_user(name):
 
 
 def main():
+    log("updata_execute")
+
     parser = argparse.ArgumentParser(
                 description='Execute previously computed update plan')
     parser.add_argument('--plan', '-p', metavar='FILE', type=Path,
@@ -443,4 +445,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        log("Unhandled exception: {}".format(e))
+        raise
