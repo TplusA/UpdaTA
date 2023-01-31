@@ -22,6 +22,7 @@
 
 import logging
 import logging.handlers
+import datetime
 
 
 def _create_syslog_handler():
@@ -57,11 +58,13 @@ _log.setLevel(logging.INFO)
 
 
 def errormsg(msg):
-    _log.error('ERROR: ' + msg)
+    _log.error(datetime.datetime.now(datetime.timezone.utc).isoformat() +
+               '  ERROR: ' + msg)
 
 
 def log(msg):
-    _log.info(msg)
+    _log.info(datetime.datetime.now(datetime.timezone.utc).isoformat() +
+              '  ' + msg)
 
 
 if __name__ == '__main__':
