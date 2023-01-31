@@ -32,10 +32,27 @@ def _create_syslog_handler():
 
 
 _log = logging.getLogger('updaTA')
-_log.addHandler(_create_syslog_handler())
-_log.addHandler(logging.StreamHandler())
-_log.addHandler(logging.handlers.RotatingFileHandler(
-    "/var/local/data/updata/logs", maxBytes=5 * 1024 * 1024, backupCount=2))
+
+# to syslog
+try:
+    _log.addHandler(_create_syslog_handler())
+except:
+    pass
+
+# to console
+try:
+    _log.addHandler(logging.StreamHandler())
+except:
+    pass
+
+# to files
+try:
+    _log.addHandler(logging.handlers.RotatingFileHandler(
+        "/var/local/data/updata/logs",
+        maxBytes=5 * 1024 * 1024, backupCount=2))
+except:
+    pass
+
 _log.setLevel(logging.INFO)
 
 
