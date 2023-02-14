@@ -22,10 +22,10 @@
 
 import argparse
 import json
-import requests
-import os
 import pwd
+import os
 from pathlib import Path
+import requests
 
 from updata.strbo_log import log, errormsg
 from updata import strbo_repo
