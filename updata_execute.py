@@ -27,6 +27,7 @@ import os
 import pwd
 from pathlib import Path
 import requests
+import pkg_resources
 
 from updata.strbo_repo import run_command, DNFVariables
 from updata.strbo_log import log, errormsg
@@ -401,7 +402,18 @@ def main():
                         help='path to dnf working directory')
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
                         default='/', help='test environment')
+    parser.add_argument('--test-version', metavar='VERSION', type=str,
+                        help='set package version for testing')
     args = parser.parse_args()
+
+    if args.test_version is None:
+        this_version = pkg_resources.require("UpdaTA")[0].version
+    else:
+        this_version = args.test_version
+
+    test_mode = 'test_sysroot' in args or 'test_version' in args
+    log("This is version {}{}"
+        .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
     run_as_user('updata')
 
