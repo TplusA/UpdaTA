@@ -129,9 +129,10 @@ def _handle_version_change(current_version, target_version,
 def _compute_package_manager_strategy(strategy, args, main_version,
                                       target_release_line):
     step, target_flavor, flavor_has_changed = \
-        _handle_repo_changes(args.base_url, target_release_line,
-                             main_version.get_flavor(), args.target_flavor,
-                             strbo_repo.DNFVariables(args.dnf_vars_dir))
+        _handle_repo_changes(
+            args.base_url, target_release_line,
+            main_version.get_flavor(), args.target_flavor,
+            strbo_repo.DNFVariables(args.test_sysroot / 'etc/dnf/vars'))
     if step:
         strategy.append(step)
 
@@ -240,14 +241,13 @@ def main():
         help='machine name of the Streaming Board (default: "raspberrypi"), '
              'required for updating via image files'
     )
-    parser.add_argument('--dnf-vars-dir', metavar='PATH', type=Path,
-                        default='/etc/dnf/vars',
-                        help='path to dnf variable definitions')
+    parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
+                        default='/', help='test environment')
     args = parser.parse_args()
 
     run_as_user('updata')
 
-    main_sys = strbo_repo.MainSystem()
+    main_sys = strbo_repo.MainSystem(args.test_sysroot / 'etc')
     main_version = main_sys.get_system_version()
 
     target_release_line = \
@@ -267,7 +267,10 @@ def main():
             _determine_recovery_target_version(args, main_version.get_flavor(),
                                                target_release_line)
 
-        recovery_sys = strbo_repo.RecoverySystem()
+        recovery_sys = strbo_repo.RecoverySystem(
+            system_mountpoint=args.test_sysroot / 'bootpartr',
+            data_mountpoint=args.test_sysroot / 'src'
+        )
 
         compat_json = strbo_compatibility.read_recovery_compatibility_file(
             args, target_release_line)
