@@ -46,7 +46,7 @@ class Data:
         self._rest_entry_point = None
         self._is_sudo_required = True
         self._download_symlink = Path('/system-update')
-        self.dnf_vars = DNFVariables(args.dnf_vars_dir)
+        self.dnf_vars = DNFVariables(args.test_sysroot / 'etc/dnf/vars')
 
     def get_rest_api_endpoint(self, category, id):
         if self._rest_entry_point is None:
@@ -393,15 +393,14 @@ def main():
     parser.add_argument('--rest-api-url', '-u', metavar='URL', type=str,
                         default='http://localhost:8467/v1',
                         help='REST API base URL')
-    parser.add_argument('--dnf-vars-dir', '-v', metavar='PATH', type=Path,
-                        default='/etc/dnf/vars',
-                        help='path to dnf variable definitions')
     parser.add_argument('--updata-work-dir', '-w', metavar='PATH', type=Path,
                         default='/var/local/data/system_update_data',
                         help='path to UpdaTA working directory')
     parser.add_argument('--dnf-work-dir', '-d', metavar='PATH', type=Path,
                         default='/var/local/data/dnf',
                         help='path to dnf working directory')
+    parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
+                        default='/', help='test environment')
     args = parser.parse_args()
 
     run_as_user('updata')
