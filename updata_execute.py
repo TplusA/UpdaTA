@@ -42,10 +42,11 @@ class ExitForOfflineUpdate(Exception):
 
 
 class Data:
-    def __init__(self, args):
+    def __init__(self, args, is_test_mode):
         self.args = args
         self._rest_entry_point = None
         self._is_sudo_required = True
+        self._is_test_mode = is_test_mode
         self._download_symlink = Path('/system-update')
         self.dnf_vars = DNFVariables(args.test_sysroot / 'etc/dnf/vars')
 
@@ -104,18 +105,21 @@ def do_manage_repos(step, d):
 
 
 def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
-                          is_sudo_required):
+                          is_sudo_required, is_test_mode):
     log_step(step, 'Cleaning up dnf state')
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
-    run_command(cmd, 'dnf prepare', True)
+    run_command(cmd, 'dnf prepare', True, test_mode=is_test_mode)
 
     tempfiles = dnf_work_dir.resolve() / 'tempfiles.json'
     if is_sudo_required:
         cmd = ['sudo', '/bin/rm', '-f', str(tempfiles)]
-        run_command(cmd, 'dnf delete tempfiles.json', True)
-    else:
+        run_command(cmd, 'dnf delete tempfiles.json', True,
+                    test_mode=is_test_mode)
+    elif not is_test_mode:
         tempfiles.unlink(missing_ok=True)
+    else:
+        log('TEST MODE: Would unlink file {}'.format(tempfiles))
 
     log_step(step, 'Downloading manifest for version {}'
              .format(step['requested_version']))
@@ -132,15 +136,20 @@ def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
     if r:
         cmd = ['sudo'] if is_sudo_required else []
         cmd += ['dnf', 'install', '--assumeyes', '--downloadonly'] + r
-        run_command(cmd, 'dnf download', True)
+        run_command(cmd, 'dnf download', True, test_mode=is_test_mode)
 
     log_step(step, 'Entering update mode')
 
     if is_sudo_required:
         cmd = ['sudo', 'ln', '-s', str(dnf_work_dir.resolve()), str(symlink)]
-        run_command(cmd, 'dnf download done', True)
+        run_command(cmd, 'dnf download done', True, test_mode=is_test_mode)
     else:
         symlink.symlink_to(dnf_work_dir, True)
+
+    if is_test_mode:
+        log('TEST MODE: Would count number of entries in {}'
+            .format(symlink / 'tempfiles.json'))
+        return
 
     try:
         tempfiles = symlink / 'tempfiles.json'
@@ -230,7 +239,7 @@ def do_dnf_install(step, d):
     if not d.in_offline_mode():
         download_all_packages(step, d.get_offline_mode_symlink(),
                               d.args.updata_work_dir, d.args.dnf_work_dir,
-                              d._is_sudo_required)
+                              d._is_sudo_required, d._is_test_mode)
         raise ExitForOfflineUpdate()
     else:
         offline_update(step, d.get_offline_mode_symlink(),
@@ -262,7 +271,7 @@ def do_reboot_system(step, d):
     cmd += ['systemctl', 'isolate', 'reboot.target']
 
     try:
-        run_command(cmd)
+        run_command(cmd, test_mode=d._is_test_mode)
     except RuntimeError as e:
         raise RebootFailedError(str(e))
 
@@ -415,9 +424,10 @@ def main():
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
-    run_as_user('updata')
+    if not test_mode:
+        run_as_user('updata')
 
-    data = Data(args)
+    data = Data(args, test_mode)
     plan = json.load(args.plan.open('r'))
 
     for step in plan:

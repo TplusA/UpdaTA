@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2021, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -25,7 +25,7 @@ import shlex
 import subprocess
 import os
 
-from .strbo_log import errormsg
+from .strbo_log import log, errormsg
 from .strbo_version import VersionNumber
 
 
@@ -209,7 +209,14 @@ def _run_command_3_4(cmd, what, need_sbin_in_path):
         _run_command_failure(cmd, what, e.output, None, e.returncode)
 
 
-def run_command(cmd, what=None, need_sbin_in_path=False):
+def run_command(cmd, what=None, need_sbin_in_path=False, *,
+                test_mode=False, test_mode_output=None):
+    if test_mode:
+        log('TEST MODE: Would execute "{}"{}'
+            .format(' '.join(cmd),
+                    '' if what is None else ' [{}]'.format(what)))
+        return bytes() if test_mode_output is None else test_mode_output
+
     if 'run' in subprocess.__dict__:
         # Python 3.5 or later
         return _run_command_3_5(cmd, what, need_sbin_in_path)
@@ -251,7 +258,7 @@ class RecoverySystem:
 
         return VersionInfo(None, 'V1', None, None, None)
 
-    def get_data_version(self):
+    def get_data_version(self, is_test_mode=False):
         sr = self.data_mountpoint / 'images/strbo-release'
         unmount_needed = False
 
@@ -259,7 +266,7 @@ class RecoverySystem:
             if not self.data_mountpoint_mounted:
                 cmd = ['sudo'] if self._is_sudo_required else []
                 cmd += ['/bin/mount', str(self.data_mountpoint)]
-                run_command(cmd)
+                run_command(cmd, test_mode=is_test_mode)
                 unmount_needed = True
 
             values = _parse_shell_style_file(sr)
@@ -273,4 +280,4 @@ class RecoverySystem:
             if unmount_needed:
                 cmd = ['sudo'] if self._is_sudo_required else []
                 cmd += ['/bin/umount', str(self.data_mountpoint)]
-                run_command(cmd)
+                run_command(cmd, test_mode=is_test_mode)

@@ -257,7 +257,8 @@ def main():
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
-    run_as_user('updata')
+    if not test_mode:
+        run_as_user('updata')
 
     main_sys = strbo_repo.MainSystem(args.test_sysroot / 'etc')
     main_version = main_sys.get_system_version()
@@ -301,7 +302,7 @@ def main():
             'keep_user_data': args.keep_user_data,
         }
 
-        dv = recovery_sys.get_data_version()
+        dv = recovery_sys.get_data_version(test_mode)
 
         if dv is None or dv.get_version_number() != target_version:
             log('Planning download of recovery images for version {}, '
