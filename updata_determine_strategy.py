@@ -267,7 +267,10 @@ def main():
         args.target_release_line if args.target_release_line is not None \
         else main_version.get_release_line()
 
-    strategy = []
+    strategy = [{
+        'action': 'nop',
+        'original_updata_version': this_version,
+    }]
 
     if target_release_line == main_version.get_release_line() and \
             not args.force_image_files:
