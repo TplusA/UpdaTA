@@ -189,6 +189,37 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
     else:
         symlink.unlink()
 
+    updata_update_mode = step.get('updata_update', 'default')
+    with_deferred_updata = \
+        updata_update_mode in ('deferred_downgrade', 'deferred_removal')
+
+    if with_deferred_updata:
+        r_deferred_update = []
+        r_deferred_residual = []
+        r_new = []
+
+        for package_path in r:
+            name = Path(package_path).name
+            if not name.startswith('updata-'):
+                r_new.append(package_path)
+                continue
+
+            log_step(step, 'Deferring installation of {}'.format(name))
+            r_deferred_update.append(package_path)
+
+            if updata_update_mode == 'deferred_removal':
+                log_step(step,
+                         'WARNING: Planned UpdaTA update mode indicates '
+                         'REMOVAL of UpdaTA, but the package is still going '
+                         'to be INSTALLED as it is listed in the target '
+                         'version manifest! Very likely, this is a BUG!')
+                log_step(step,
+                         'WARNING: Switching update mode to '
+                         '"deferred_downgrade"')
+                updata_update_mode = 'deferred_downgrade'
+
+        r = r_new
+
     base_update_command = ['dnf', 'install', '--assumeyes', '--allowerasing',
                            '--setopt', 'keepcache=True']
     base_remove_command = ['dnf', 'remove', '--assumeyes', '--allowerasing']
@@ -227,7 +258,16 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
         ver = ver[0] if len(ver) == 1 else ver[1]
 
         package = '{}-{}.{}'.format(name, ver, arch)
-        if r and package not in r:
+
+        if with_deferred_updata and name.startswith('updata'):
+            if updata_update_mode == 'deferred_removal':
+                r_deferred_residual.append(package)
+                log_step(step,
+                         'Deferring explicit removal of {}'.format(package))
+            else:
+                log_step(step,
+                         'Not removing {}, will update later'.format(package))
+        elif r and package not in r:
             residual.append(package)
 
     log_step(step, 'Removing {} residual packages'.format(len(residual)))
@@ -239,6 +279,27 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
 
     log_step(step, "Running ldconfig after removing packages")
     _do_ldconfig(is_sudo_required, 'ldconfig after removal', is_test_mode)
+
+    if with_deferred_updata:
+        log_step(step, 'Processing deferred packages')
+
+        log_step(step, 'Installing {} packages'.format(len(r_deferred_update)))
+        if r_deferred_update:
+            cmd = ['sudo'] if is_sudo_required else []
+            cmd += base_update_command + r_deferred_update
+            run_command(cmd, 'dnf install deferred', True,
+                        test_mode=is_test_mode)
+
+        log_step(step,
+                 'Removing {} residual packages'
+                 .format(len(r_deferred_residual)))
+        if r_deferred_residual:
+            cmd = ['sudo'] if is_sudo_required else []
+            cmd += base_remove_command + r_deferred_residual
+            run_command(cmd, 'dnf remove deferred', True,
+                        test_mode=is_test_mode)
+    else:
+        log_step(step, 'No deferred package processing')
 
     log_step(step, 'Cleaning up downloaded packages')
     cmd = ['sudo'] if is_sudo_required else []
