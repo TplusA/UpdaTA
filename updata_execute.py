@@ -42,11 +42,13 @@ class ExitForOfflineUpdate(Exception):
 
 
 class Data:
-    def __init__(self, args, is_test_mode):
+    def __init__(self, args, is_test_mode, test_offline_mode_path):
         self.args = args
         self._rest_entry_point = None
         self._is_sudo_required = True
         self._is_test_mode = is_test_mode
+        self._test_offline_mode_path = \
+            test_offline_mode_path if is_test_mode else None
         self._download_symlink = Path('/system-update')
         self.dnf_vars = DNFVariables(args.test_sysroot / 'etc/dnf/vars')
 
@@ -69,10 +71,16 @@ class Data:
         return None
 
     def in_offline_mode(self):
-        return self._download_symlink.exists()
+        if self._test_offline_mode_path is None:
+            return self._download_symlink.exists()
+        else:
+            return self._test_offline_mode_path
 
     def get_offline_mode_symlink(self):
-        return self._download_symlink
+        if self._test_offline_mode_path is None:
+            return self._download_symlink
+        else:
+            return self._test_offline_mode_path
 
 
 def log_step(step, msg):
@@ -159,7 +167,14 @@ def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
         log_step(step, 'NO packages downloaded: {}'.format(e))
 
 
-def offline_update(step, symlink, updata_work_dir, is_sudo_required):
+def _do_ldconfig(is_sudo_required, what, is_test_mode):
+    cmd = ['sudo'] if is_sudo_required else []
+    cmd += ['ldconfig']
+    run_command(cmd, what, True, test_mode=is_test_mode)
+
+
+def offline_update(step, symlink, updata_work_dir, is_sudo_required,
+                   is_test_mode):
     try:
         tempfiles = symlink / 'tempfiles.json'
         r = list(json.load(tempfiles.open()))
@@ -169,22 +184,55 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
 
     if is_sudo_required:
         cmd = ['sudo', 'rm', str(symlink)]
-        run_command(cmd, 'dnf begin offline update', True)
+        run_command(cmd, 'dnf begin offline update', True,
+                    test_mode=is_test_mode)
     else:
         symlink.unlink()
+
+    updata_update_mode = step.get('updata_update', 'default')
+    with_deferred_updata = \
+        updata_update_mode in ('deferred_downgrade', 'deferred_removal')
+
+    if with_deferred_updata:
+        r_deferred_update = []
+        r_deferred_residual = []
+        r_new = []
+
+        for package_path in r:
+            name = Path(package_path).name
+            if not name.startswith('updata-'):
+                r_new.append(package_path)
+                continue
+
+            log_step(step, 'Deferring installation of {}'.format(name))
+            r_deferred_update.append(package_path)
+
+            if updata_update_mode == 'deferred_removal':
+                log_step(step,
+                         'WARNING: Planned UpdaTA update mode indicates '
+                         'REMOVAL of UpdaTA, but the package is still going '
+                         'to be INSTALLED as it is listed in the target '
+                         'version manifest! Very likely, this is a BUG!')
+                log_step(step,
+                         'WARNING: Switching update mode to '
+                         '"deferred_downgrade"')
+                updata_update_mode = 'deferred_downgrade'
+
+        r = r_new
+
+    base_update_command = ['dnf', 'install', '--assumeyes', '--allowerasing',
+                           '--setopt', 'keepcache=True']
+    base_remove_command = ['dnf', 'remove', '--assumeyes', '--allowerasing']
 
     log_step(step, 'Installing {} packages'.format(0 if r is None else len(r)))
 
     if r:
         cmd = ['sudo'] if is_sudo_required else []
-        cmd += ['dnf', 'install', '--assumeyes', '--allowerasing',
-                '--setopt', 'keepcache=True'] + r
-        run_command(cmd, 'dnf install', True)
+        cmd += base_update_command + r
+        run_command(cmd, 'dnf install', True, test_mode=is_test_mode)
 
     log_step(step, "Running ldconfig after installing packages")
-    cmd = ['sudo'] if is_sudo_required else []
-    cmd += ['ldconfig']
-    run_command(cmd, "ldconfig after install", True)
+    _do_ldconfig(is_sudo_required, 'ldconfig after install', is_test_mode)
 
     try:
         manifest = updata_work_dir / 'manifest.txt'
@@ -198,9 +246,10 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'list', '--installed']
 
-    for line in run_command(cmd, 'dnf list', True).decode().split('\n'):
+    for line in run_command(cmd, 'dnf list', True,
+                            test_mode=is_test_mode).decode().split('\n'):
         try:
-            p, ver, rest = line.split(None, 2)
+            p, ver, _ = line.split(None, 2)
         except ValueError:
             continue
 
@@ -209,25 +258,53 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
         ver = ver[0] if len(ver) == 1 else ver[1]
 
         package = '{}-{}.{}'.format(name, ver, arch)
-        if r and package not in r:
+
+        if with_deferred_updata and name.startswith('updata'):
+            if updata_update_mode == 'deferred_removal':
+                r_deferred_residual.append(package)
+                log_step(step,
+                         'Deferring explicit removal of {}'.format(package))
+            else:
+                log_step(step,
+                         'Not removing {}, will update later'.format(package))
+        elif r and package not in r:
             residual.append(package)
 
     log_step(step, 'Removing {} residual packages'.format(len(residual)))
 
     if residual:
         cmd = ['sudo'] if is_sudo_required else []
-        cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
-        run_command(cmd, 'dnf remove', True)
+        cmd += base_remove_command + residual
+        run_command(cmd, 'dnf remove', True, test_mode=is_test_mode)
 
     log_step(step, "Running ldconfig after removing packages")
-    cmd = ['sudo'] if is_sudo_required else []
-    cmd += ['ldconfig']
-    run_command(cmd, "ldconfig after removal", True)
+    _do_ldconfig(is_sudo_required, 'ldconfig after removal', is_test_mode)
+
+    if with_deferred_updata:
+        log_step(step, 'Processing deferred packages')
+
+        log_step(step, 'Installing {} packages'.format(len(r_deferred_update)))
+        if r_deferred_update:
+            cmd = ['sudo'] if is_sudo_required else []
+            cmd += base_update_command + r_deferred_update
+            run_command(cmd, 'dnf install deferred', True,
+                        test_mode=is_test_mode)
+
+        log_step(step,
+                 'Removing {} residual packages'
+                 .format(len(r_deferred_residual)))
+        if r_deferred_residual:
+            cmd = ['sudo'] if is_sudo_required else []
+            cmd += base_remove_command + r_deferred_residual
+            run_command(cmd, 'dnf remove deferred', True,
+                        test_mode=is_test_mode)
+    else:
+        log_step(step, 'No deferred package processing')
 
     log_step(step, 'Cleaning up downloaded packages')
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
-    run_command(cmd, 'dnf cleanup', True)
+    run_command(cmd, 'dnf cleanup', True, test_mode=is_test_mode)
 
     manifest.unlink(missing_ok=True)
 
@@ -243,7 +320,8 @@ def do_dnf_install(step, d):
         raise ExitForOfflineUpdate()
     else:
         offline_update(step, d.get_offline_mode_symlink(),
-                       d.args.updata_work_dir, d._is_sudo_required)
+                       d.args.updata_work_dir, d._is_sudo_required,
+                       d._is_test_mode)
 
 
 def do_dnf_distro_sync(step, d):
@@ -374,6 +452,15 @@ def do_recover_system(step, d):
         raise RebootFailedError(str(e))
 
 
+def do_nothing(step, d):
+    plan_version = step.get('original_updata_version', None)
+
+    if plan_version is None:
+        log_step(step, 'Plan generated by legacy version')
+    else:
+        log_step(step, 'Plan generated by version {}'.format(plan_version))
+
+
 def run_as_user(name):
     try:
         pw = pwd.getpwnam(name)
@@ -409,6 +496,10 @@ def main():
     parser.add_argument('--dnf-work-dir', '-d', metavar='PATH', type=Path,
                         default='/var/local/data/dnf',
                         help='path to dnf working directory')
+    parser.add_argument('--test-offline-mode-path', metavar='PATH', type=Path,
+                        default=None,
+                        help='assume offline mode for testing, use PATH for '
+                        '/system-update symlink')
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
                         default='/', help='test environment')
     parser.add_argument('--test-version', metavar='VERSION', type=str,
@@ -420,14 +511,15 @@ def main():
     else:
         this_version = args.test_version
 
-    test_mode = 'test_sysroot' in args or 'test_version' in args
+    test_mode = ('test_sysroot' in args or 'test_version' in args or
+                 'test_offline_mode_path' in args)
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
     if not test_mode:
         run_as_user('updata')
 
-    data = Data(args, test_mode)
+    data = Data(args, test_mode, args.test_offline_mode_path)
     plan = json.load(args.plan.open('r'))
 
     for step in plan:
@@ -441,6 +533,7 @@ def main():
         'reboot-system': do_reboot_system,
         'run-installer': do_run_installer,
         'recover-system': do_recover_system,
+        'nop': do_nothing,
     }
 
     for step in plan:

@@ -86,8 +86,44 @@ def _read_latest_txt_file(url, short_name):
     return None
 
 
-def _handle_version_change(current_version, target_version,
-                           force_version_check, repo_url, target_flavor):
+def _get_requested_updata_version(manifest_url):
+    r = requests.get(manifest_url)
+    if r.status_code != requests.codes.ok:
+        raise RuntimeError('Cannot access {}: {}'
+                           .format(manifest_url, r.status_code))
+
+    for _, pname, version in [line.split(None, 3)[0:3]
+                              for line in r.text.split('\n') if line]:
+        if pname == 'updata':
+            return version
+
+    log('WARNING: UpdaTA is not listed in {}'.format(manifest_url))
+    return None
+
+
+def _version_compare(version_a, version_b):
+    if version_a is None:
+        return 0 if version_b is None else -1
+
+    if version_b is None:
+        return 1
+
+    version_a = version_a.split('.')
+    version_b = version_b.split('.')
+
+    for a, b in [(int(a), int(b)) for a, b in zip(version_a, version_b)]:
+        if a < b:
+            return -1
+
+        if a > b:
+            return 1
+
+    return len(version_a) - len(version_b)
+
+
+def _handle_version_change(current_version, this_updata_version,
+                           target_version, force_version_check, repo_url,
+                           target_flavor):
     if not target_flavor:
         target_flavor = 'stable'
 
@@ -123,12 +159,27 @@ def _handle_version_change(current_version, target_version,
         'version_file_url': '{}/{}/versions/V{}.version'
                             .format(repo_url, target_flavor, target_version),
     }
-    _ensure_url_exists(result['version_file_url'])
+
+    next_version = _get_requested_updata_version(result['version_file_url'])
+    cmp = _version_compare(next_version, this_updata_version)
+    if cmp < 0:
+        if next_version is None:
+            log('UpdaTA is going to be REMOVED')
+            result['updata_update'] = 'deferred_removal'
+        else:
+            log('UpdaTA is going to be DOWNGRADED from {} to {}'
+                .format(this_updata_version, next_version))
+            result['updata_update'] = 'deferred_downgrade'
+    else:
+        log('Target version of UpdaTA is {} ({})'
+            .format(next_version,
+                    'unchanged' if cmp == 0 else 'regular upgrade'))
+
     return result
 
 
-def _compute_package_manager_strategy(strategy, args, main_version,
-                                      target_release_line):
+def _compute_package_manager_strategy(strategy, args, this_updata_version,
+                                      main_version, target_release_line):
     step, target_flavor, flavor_has_changed = \
         _handle_repo_changes(
             args.base_url, target_release_line,
@@ -138,7 +189,7 @@ def _compute_package_manager_strategy(strategy, args, main_version,
         strategy.append(step)
 
     step = _handle_version_change(
-                main_version.get_version_number(),
+                main_version.get_version_number(), this_updata_version,
                 args.target_version, flavor_has_changed,
                 '{}/{}'.format(args.base_url, target_release_line),
                 target_flavor)
@@ -267,13 +318,16 @@ def main():
         args.target_release_line if args.target_release_line is not None \
         else main_version.get_release_line()
 
-    strategy = []
+    strategy = [{
+        'action': 'nop',
+        'original_updata_version': this_version,
+    }]
 
     if target_release_line == main_version.get_release_line() and \
             not args.force_image_files:
         # we can use the package manager while within the same release line
-        _compute_package_manager_strategy(strategy, args, main_version,
-                                          target_release_line)
+        _compute_package_manager_strategy(strategy, args, this_version,
+                                          main_version, target_release_line)
     else:
         # changing the release line always implies recovery
         target_version, target_flavor = \
