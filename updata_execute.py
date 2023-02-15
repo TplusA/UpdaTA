@@ -159,7 +159,14 @@ def download_all_packages(step, symlink, updata_work_dir, dnf_work_dir,
         log_step(step, 'NO packages downloaded: {}'.format(e))
 
 
-def offline_update(step, symlink, updata_work_dir, is_sudo_required):
+def _do_ldconfig(is_sudo_required, what, is_test_mode):
+    cmd = ['sudo'] if is_sudo_required else []
+    cmd += ['ldconfig']
+    run_command(cmd, what, True, test_mode=is_test_mode)
+
+
+def offline_update(step, symlink, updata_work_dir, is_sudo_required,
+                   is_test_mode):
     try:
         tempfiles = symlink / 'tempfiles.json'
         r = list(json.load(tempfiles.open()))
@@ -182,9 +189,7 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
         run_command(cmd, 'dnf install', True)
 
     log_step(step, "Running ldconfig after installing packages")
-    cmd = ['sudo'] if is_sudo_required else []
-    cmd += ['ldconfig']
-    run_command(cmd, "ldconfig after install", True)
+    _do_ldconfig(is_sudo_required, 'ldconfig after install', is_test_mode)
 
     try:
         manifest = updata_work_dir / 'manifest.txt'
@@ -220,9 +225,7 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required):
         run_command(cmd, 'dnf remove', True)
 
     log_step(step, "Running ldconfig after removing packages")
-    cmd = ['sudo'] if is_sudo_required else []
-    cmd += ['ldconfig']
-    run_command(cmd, "ldconfig after removal", True)
+    _do_ldconfig(is_sudo_required, 'ldconfig after removal', is_test_mode)
 
     log_step(step, 'Cleaning up downloaded packages')
     cmd = ['sudo'] if is_sudo_required else []
@@ -243,7 +246,8 @@ def do_dnf_install(step, d):
         raise ExitForOfflineUpdate()
     else:
         offline_update(step, d.get_offline_mode_symlink(),
-                       d.args.updata_work_dir, d._is_sudo_required)
+                       d.args.updata_work_dir, d._is_sudo_required,
+                       d._is_test_mode)
 
 
 def do_dnf_distro_sync(step, d):
