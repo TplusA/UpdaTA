@@ -160,7 +160,7 @@ class MainSystem:
         try:
             values = _parse_simple_assignments_file(sr)
             return None if values is None \
-                   else VersionInfo.from_os_release(values)
+                else VersionInfo.from_os_release(values)
         except Exception as e:
             errormsg('Failed obtaining main system version from {}: {}'
                      .format(sr, e))
@@ -271,7 +271,7 @@ class RecoverySystem:
 
             values = _parse_shell_style_file(sr)
             return None if values is None \
-                   else VersionInfo.from_strbo_release(values)
+                else VersionInfo.from_strbo_release(values)
         except Exception as e:
             errormsg('Failed obtaining recovery data version from {}: {}'
                      .format(sr, e))

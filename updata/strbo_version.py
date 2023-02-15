@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2020, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -807,7 +807,7 @@ class VersionRange:
             raise RuntimeError('vrange is neither a string nor a list')
 
         if len(vrange) != 2:
-            raise RuntimeError('vrange list has {} items'.len(vrange))
+            raise RuntimeError('vrange list has {} items'.format(len(vrange)))
 
         return VersionRange(VersionNumber.from_string(vrange[0], True),
                             VersionNumber.from_string(vrange[1], True))

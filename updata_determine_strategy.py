@@ -27,6 +27,7 @@ import os
 from pathlib import Path
 import requests
 import pkg_resources
+import sys
 
 from updata.strbo_log import log, errormsg
 from updata import strbo_repo
@@ -314,6 +315,9 @@ def main():
     main_sys = strbo_repo.MainSystem(args.test_sysroot / 'etc')
     main_version = main_sys.get_system_version()
 
+    if main_version is None:
+        sys.exit(23)
+
     target_release_line = \
         args.target_release_line if args.target_release_line is not None \
         else main_version.get_release_line()
@@ -338,12 +342,16 @@ def main():
             system_mountpoint=args.test_sysroot / 'bootpartr',
             data_mountpoint=args.test_sysroot / 'src'
         )
+        recovery_version = recovery_sys.get_system_version()
+        if recovery_version is None:
+            sys.exit(24)
 
         compat_json = strbo_compatibility.read_recovery_compatibility_file(
             args, target_release_line)
+
         step = strbo_compatibility.ensure_recovery_system_compatibility(
             compat_json, args,
-            recovery_sys.get_system_version().get_version_number(),
+            recovery_version.get_version_number(),
             target_release_line, target_version, target_flavor)
         if step:
             strategy.append(step)

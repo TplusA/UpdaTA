@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of UpdaTA
 #
@@ -249,6 +249,7 @@ def _test_extended_compatibilities():
     result = ensure_recovery_system_compatibility(
         compat, args, VersionNumber.from_string('2.7.4'),
         'V3', VersionNumber.from_string('3.1.0'), 'stable')
+    assert result is not None
     assert result['requested_version'] == '3.1.0'
     assert result['installer_url'] == \
         'https://points.to.nowhere/updates/V3/recovery-system.raspberrypi/' \
@@ -264,6 +265,7 @@ def _test_extended_compatibilities():
     result = ensure_recovery_system_compatibility(
         compat, args, VersionNumber.from_string('4.0.9'),
         'V3', VersionNumber.from_string('3.0.2'), 'stable')
+    assert result is not None
     assert result['requested_version'] == '3.0.2'
     assert result['installer_url'] == \
         'https://points.to.nowhere/updates/V3/recovery-system.raspberrypi/' \

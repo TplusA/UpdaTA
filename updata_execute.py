@@ -193,11 +193,11 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
     with_deferred_updata = \
         updata_update_mode in ('deferred_downgrade', 'deferred_removal')
 
-    if with_deferred_updata:
-        r_deferred_update = []
-        r_deferred_residual = []
-        r_new = []
+    r_deferred_update = []
+    r_deferred_residual = []
 
+    if with_deferred_updata and r:
+        r_new = []
         for package_path in r:
             name = Path(package_path).name
             if not name.startswith('updata-'):
@@ -238,8 +238,9 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
         manifest = updata_work_dir / 'manifest.txt'
         r = set([line.strip() for line in manifest.open().readlines()])
     except Exception as e:
-        errormsg('Failed to read manifest: {}'.format(e))
+        manifest = None
         r = set()
+        errormsg('Failed to read manifest: {}'.format(e))
 
     residual = []
 
@@ -306,7 +307,8 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
     run_command(cmd, 'dnf cleanup', True, test_mode=is_test_mode)
 
-    manifest.unlink(missing_ok=True)
+    if manifest:
+        manifest.unlink(missing_ok=True)
 
 
 def do_dnf_install(step, d):
