@@ -42,11 +42,13 @@ class ExitForOfflineUpdate(Exception):
 
 
 class Data:
-    def __init__(self, args, is_test_mode):
+    def __init__(self, args, is_test_mode, test_offline_mode_path):
         self.args = args
         self._rest_entry_point = None
         self._is_sudo_required = True
         self._is_test_mode = is_test_mode
+        self._test_offline_mode_path = \
+            test_offline_mode_path if is_test_mode else None
         self._download_symlink = Path('/system-update')
         self.dnf_vars = DNFVariables(args.test_sysroot / 'etc/dnf/vars')
 
@@ -69,10 +71,16 @@ class Data:
         return None
 
     def in_offline_mode(self):
-        return self._download_symlink.exists()
+        if self._test_offline_mode_path is None:
+            return self._download_symlink.exists()
+        else:
+            return self._test_offline_mode_path
 
     def get_offline_mode_symlink(self):
-        return self._download_symlink
+        if self._test_offline_mode_path is None:
+            return self._download_symlink
+        else:
+            return self._test_offline_mode_path
 
 
 def log_step(step, msg):
@@ -176,17 +184,21 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
 
     if is_sudo_required:
         cmd = ['sudo', 'rm', str(symlink)]
-        run_command(cmd, 'dnf begin offline update', True)
+        run_command(cmd, 'dnf begin offline update', True,
+                    test_mode=is_test_mode)
     else:
         symlink.unlink()
+
+    base_update_command = ['dnf', 'install', '--assumeyes', '--allowerasing',
+                           '--setopt', 'keepcache=True']
+    base_remove_command = ['dnf', 'remove', '--assumeyes', '--allowerasing']
 
     log_step(step, 'Installing {} packages'.format(0 if r is None else len(r)))
 
     if r:
         cmd = ['sudo'] if is_sudo_required else []
-        cmd += ['dnf', 'install', '--assumeyes', '--allowerasing',
-                '--setopt', 'keepcache=True'] + r
-        run_command(cmd, 'dnf install', True)
+        cmd += base_update_command + r
+        run_command(cmd, 'dnf install', True, test_mode=is_test_mode)
 
     log_step(step, "Running ldconfig after installing packages")
     _do_ldconfig(is_sudo_required, 'ldconfig after install', is_test_mode)
@@ -203,9 +215,10 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'list', '--installed']
 
-    for line in run_command(cmd, 'dnf list', True).decode().split('\n'):
+    for line in run_command(cmd, 'dnf list', True,
+                            test_mode=is_test_mode).decode().split('\n'):
         try:
-            p, ver, rest = line.split(None, 2)
+            p, ver, _ = line.split(None, 2)
         except ValueError:
             continue
 
@@ -221,8 +234,8 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
 
     if residual:
         cmd = ['sudo'] if is_sudo_required else []
-        cmd += ['dnf', 'remove', '--assumeyes', '--allowerasing'] + residual
-        run_command(cmd, 'dnf remove', True)
+        cmd += base_remove_command + residual
+        run_command(cmd, 'dnf remove', True, test_mode=is_test_mode)
 
     log_step(step, "Running ldconfig after removing packages")
     _do_ldconfig(is_sudo_required, 'ldconfig after removal', is_test_mode)
@@ -230,7 +243,7 @@ def offline_update(step, symlink, updata_work_dir, is_sudo_required,
     log_step(step, 'Cleaning up downloaded packages')
     cmd = ['sudo'] if is_sudo_required else []
     cmd += ['dnf', 'clean', 'packages', '--assumeyes']
-    run_command(cmd, 'dnf cleanup', True)
+    run_command(cmd, 'dnf cleanup', True, test_mode=is_test_mode)
 
     manifest.unlink(missing_ok=True)
 
@@ -422,6 +435,10 @@ def main():
     parser.add_argument('--dnf-work-dir', '-d', metavar='PATH', type=Path,
                         default='/var/local/data/dnf',
                         help='path to dnf working directory')
+    parser.add_argument('--test-offline-mode-path', metavar='PATH', type=Path,
+                        default=None,
+                        help='assume offline mode for testing, use PATH for '
+                        '/system-update symlink')
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
                         default='/', help='test environment')
     parser.add_argument('--test-version', metavar='VERSION', type=str,
@@ -433,14 +450,15 @@ def main():
     else:
         this_version = args.test_version
 
-    test_mode = 'test_sysroot' in args or 'test_version' in args
+    test_mode = ('test_sysroot' in args or 'test_version' in args or
+                 'test_offline_mode_path' in args)
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
     if not test_mode:
         run_as_user('updata')
 
-    data = Data(args, test_mode)
+    data = Data(args, test_mode, args.test_offline_mode_path)
     plan = json.load(args.plan.open('r'))
 
     for step in plan:
