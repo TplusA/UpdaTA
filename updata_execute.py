@@ -479,8 +479,6 @@ def run_as_user(name):
 
 
 def main():
-    log("updata_execute")
-
     parser = argparse.ArgumentParser(
                 description='Execute previously computed update plan')
     parser.add_argument('--plan', '-p', metavar='FILE', type=Path,
@@ -498,6 +496,11 @@ def main():
     parser.add_argument('--dnf-work-dir', '-d', metavar='PATH', type=Path,
                         default='/var/local/data/dnf',
                         help='path to dnf working directory')
+    parser.add_argument(
+        '--version', action='version',
+        version='UpdaTA {} -- updata_execute'
+                .format(pkg_resources.require("UpdaTA")[0].version)
+    )
     parser.add_argument('--test-offline-mode-path', metavar='PATH', type=Path,
                         default=None,
                         help='assume offline mode for testing, use PATH for '
@@ -507,6 +510,8 @@ def main():
     parser.add_argument('--test-version', metavar='VERSION', type=str,
                         help='set package version for testing')
     args = parser.parse_args()
+
+    log("updata_execute")
 
     if args.test_version is None:
         this_version = pkg_resources.require("UpdaTA")[0].version

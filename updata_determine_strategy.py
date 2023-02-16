@@ -242,8 +242,6 @@ def run_as_user(name):
 
 
 def main():
-    log("updata_determine_strategy")
-
     parser = argparse.ArgumentParser(
                 description='Determine upgrade path from current state to '
                             'given version number')
@@ -294,11 +292,18 @@ def main():
         help='machine name of the Streaming Board (default: "raspberrypi"), '
              'required for updating via image files'
     )
+    parser.add_argument(
+        '--version', action='version',
+        version='UpdaTA {} -- updata_determine_strategy'
+                .format(pkg_resources.require("UpdaTA")[0].version)
+    )
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
                         default='/', help='test environment')
     parser.add_argument('--test-version', metavar='VERSION', type=str,
                         help='set package version for testing')
     args = parser.parse_args()
+
+    log("updata_determine_strategy")
 
     if args.test_version is None:
         this_version = pkg_resources.require("UpdaTA")[0].version
