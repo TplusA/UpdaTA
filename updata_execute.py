@@ -50,7 +50,7 @@ class Data:
         self._test_offline_mode_path = \
             test_offline_mode_path if is_test_mode else None
         self._download_symlink = Path('/system-update')
-        self.dnf_vars = DNFVariables(args.test_sysroot / 'etc/dnf/vars')
+        self.dnf_vars = DNFVariables(args.sysroot / 'etc/dnf/vars')
 
     def get_rest_api_endpoint(self, category, id):
         if self._rest_entry_point is None:
@@ -502,31 +502,34 @@ def main():
                 .format(pkg_resources.require("UpdaTA")[0].version)
     )
     parser.add_argument('--test-offline-mode-path', metavar='PATH', type=Path,
-                        default=None,
+                        default=argparse.SUPPRESS,
                         help='assume offline mode for testing, use PATH for '
                         '/system-update symlink')
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
-                        default='/', help='test environment')
+                        default=argparse.SUPPRESS, help='test environment')
     parser.add_argument('--test-version', metavar='VERSION', type=str,
+                        default=argparse.SUPPRESS,
                         help='set package version for testing')
     args = parser.parse_args()
 
     log("updata_execute")
 
-    if args.test_version is None:
-        this_version = pkg_resources.require("UpdaTA")[0].version
-    else:
-        this_version = args.test_version
+    test_mode = ('test_sysroot' in args.__dict__ or
+                 'test_version' in args.__dict__ or
+                 'test_offline_mode_path' in args.__dict__)
+    this_version = \
+        args.__dict__.get('test_version',
+                          pkg_resources.require("UpdaTA")[0].version)
+    args.sysroot = args.__dict__.get('test_sysroot', Path('/'))
 
-    test_mode = ('test_sysroot' in args or 'test_version' in args or
-                 'test_offline_mode_path' in args)
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
     if not test_mode:
         run_as_user('updata')
 
-    data = Data(args, test_mode, args.test_offline_mode_path)
+    data = Data(args, test_mode,
+                args.__dict__.get('test_offline_mode_path', None))
     plan = json.load(args.plan.open('r'))
 
     for step in plan:

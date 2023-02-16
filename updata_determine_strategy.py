@@ -185,7 +185,7 @@ def _compute_package_manager_strategy(strategy, args, this_updata_version,
         _handle_repo_changes(
             args.base_url, target_release_line,
             main_version.get_flavor(), args.target_flavor,
-            strbo_repo.DNFVariables(args.test_sysroot / 'etc/dnf/vars'))
+            strbo_repo.DNFVariables(args.sysroot / 'etc/dnf/vars'))
     if step:
         strategy.append(step)
 
@@ -298,26 +298,28 @@ def main():
                 .format(pkg_resources.require("UpdaTA")[0].version)
     )
     parser.add_argument('--test-sysroot', metavar='PATH', type=Path,
-                        default='/', help='test environment')
+                        default=argparse.SUPPRESS, help='test environment')
     parser.add_argument('--test-version', metavar='VERSION', type=str,
+                        default=argparse.SUPPRESS,
                         help='set package version for testing')
     args = parser.parse_args()
 
     log("updata_determine_strategy")
 
-    if args.test_version is None:
-        this_version = pkg_resources.require("UpdaTA")[0].version
-    else:
-        this_version = args.test_version
+    test_mode = ('test_sysroot' in args.__dict__ or
+                 'test_version' in args.__dict__)
+    this_version = \
+        args.__dict__.get('test_version',
+                          pkg_resources.require("UpdaTA")[0].version)
+    args.sysroot = args.__dict__.get('test_sysroot', Path('/'))
 
-    test_mode = 'test_sysroot' in args or 'test_version' in args
     log("This is version {}{}"
         .format(this_version, ' --- TEST MODE' if test_mode else ''))
 
     if not test_mode:
         run_as_user('updata')
 
-    main_sys = strbo_repo.MainSystem(args.test_sysroot / 'etc')
+    main_sys = strbo_repo.MainSystem(args.sysroot / 'etc')
     main_version = main_sys.get_system_version()
 
     if main_version is None:
@@ -344,8 +346,8 @@ def main():
                                                target_release_line)
 
         recovery_sys = strbo_repo.RecoverySystem(
-            system_mountpoint=args.test_sysroot / 'bootpartr',
-            data_mountpoint=args.test_sysroot / 'src'
+            system_mountpoint=args.sysroot / 'bootpartr',
+            data_mountpoint=args.sysroot / 'src'
         )
         recovery_version = recovery_sys.get_system_version()
         if recovery_version is None:
