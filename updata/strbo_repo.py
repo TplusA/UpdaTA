@@ -140,7 +140,7 @@ class DNFVariables:
 
 
 class MainSystem:
-    def __init__(self, etc_path='/etc'):
+    def __init__(self, etc_path=Path('/etc')):
         self._etc_path = Path(etc_path)
 
     def get_system_version(self):
@@ -226,8 +226,8 @@ def run_command(cmd, what=None, need_sbin_in_path=False, *,
 
 
 class RecoverySystem:
-    def __init__(self, system_mountpoint='/bootpartr',
-                 data_mountpoint='/src', data_mountpoint_mounted=False):
+    def __init__(self, system_mountpoint=Path('/bootpartr'),
+                 data_mountpoint=Path('/src'), data_mountpoint_mounted=False):
         self.system_mountpoint = Path(system_mountpoint)
         self.data_mountpoint = Path(data_mountpoint)
         self.data_mountpoint_mounted = data_mountpoint_mounted
