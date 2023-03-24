@@ -3,6 +3,7 @@
 /GTAGS
 /tags
 /types_*.taghl
+/.gitreview
 
 __pycache__/
 
